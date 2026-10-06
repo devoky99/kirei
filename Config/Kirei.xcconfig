@@ -1,0 +1,55 @@
+// Einstellungen der App für iPhone, iPad und Mac.
+// Ein Ziel, eine Bundle-ID: Voraussetzung für Universal Purchase,
+// also einen Kauf für alle Geräte.
+
+PRODUCT_NAME = Kirei
+
+// Neutral gewählt, nicht an den Arbeitstitel gebunden. Änderbar, bis die ID
+// im Entwicklerkonto registriert ist; danach nie wieder.
+PRODUCT_BUNDLE_IDENTIFIER = de.devoky99.fotoaufraeumer
+
+MARKETING_VERSION = 0.1.0
+CURRENT_PROJECT_VERSION = 1
+
+// Plattformen: iPhone, iPad und echte Mac-App (kein Catalyst).
+SDKROOT = auto
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx
+SUPPORTS_MACCATALYST = NO
+SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO
+SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO
+TARGETED_DEVICE_FAMILY = 1,2
+IPHONEOS_DEPLOYMENT_TARGET = 18.0
+MACOSX_DEPLOYMENT_TARGET = 15.0
+
+// Swift 6 mit strikter Nebenläufigkeitsprüfung.
+SWIFT_VERSION = 6.0
+SWIFT_EMIT_LOC_STRINGS = YES
+ENABLE_PREVIEWS = YES
+
+// Info.plist: erzeugt, ergänzt um Config/Info.plist.
+GENERATE_INFOPLIST_FILE = YES
+INFOPLIST_FILE = Config/Info.plist
+INFOPLIST_KEY_CFBundleDisplayName = Kirei
+INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.photography
+INFOPLIST_KEY_NSPhotoLibraryUsageDescription = Kirei needs access to your photos to find duplicates and similar pictures. Nothing leaves your device.
+INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphone*] = YES
+INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphone*] = YES
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone[sdk=iphone*] = UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad[sdk=iphone*] = UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor
+
+// Signieren: automatisch. Das Team steht in Config/Local.xcconfig (nicht im Repo).
+CODE_SIGN_STYLE = Automatic
+
+// Mac: Sandbox mit Fotozugriff und ohne Netz-Berechtigung.
+// So kann die Mac-App technisch gar nicht ins Netz.
+CODE_SIGN_ENTITLEMENTS[sdk=macosx*] = Config/Kirei-macOS.entitlements
+ENABLE_HARDENED_RUNTIME[sdk=macosx*] = YES
+
+LD_RUNPATH_SEARCH_PATHS[sdk=iphone*] = $(inherited) @executable_path/Frameworks
+LD_RUNPATH_SEARCH_PATHS[sdk=macosx*] = $(inherited) @executable_path/../Frameworks
+
+// Persönliche Werte wie DEVELOPMENT_TEAM, optional.
+#include? "Local.xcconfig"

@@ -1,0 +1,276 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%lld new since last time": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld neu seit dem letzten Mal"
+          }
+        }
+      }
+    },
+    "%lld photos": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Foto"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Fotos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld screenshots": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld screenshot"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld screenshots"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Bildschirmfoto"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Bildschirmfotos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld videos": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld video"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld videos"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Video"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Videos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Check again": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut prüfen"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        }
+      }
+    },
+    "Kirei looks for duplicates, similar shots and blurry photos. Everything stays on your device, and nothing is deleted without you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kirei sucht Duplikate, ähnliche Aufnahmen und unscharfe Fotos. Alles bleibt auf deinem Gerät, und nichts wird ohne dich gelöscht."
+          }
+        }
+      }
+    },
+    "Library": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediathek"
+          }
+        }
+      }
+    },
+    "Limited access: Kirei only sees the photos you selected.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingeschränkter Zugriff: Kirei sieht nur die Fotos, die du ausgewählt hast."
+          }
+        }
+      }
+    },
+    "Open Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen öffnen"
+          }
+        }
+      }
+    },
+    "Photo access is off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Zugriff auf Fotos ist aus"
+          }
+        }
+      }
+    },
+    "Photo, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto, %@"
+          }
+        }
+      }
+    },
+    "Reading your library…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mediathek wird gelesen …"
+          }
+        }
+      }
+    },
+    "Screenshot, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmfoto, %@"
+          }
+        }
+      }
+    },
+    "The library could not be read. Please try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Mediathek konnte nicht gelesen werden. Bitte versuch es noch einmal."
+          }
+        }
+      }
+    },
+    "Tidy up your photos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos aufräumen"
+          }
+        }
+      }
+    },
+    "Video, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video, %@"
+          }
+        }
+      }
+    },
+    "You can turn it on in Settings. Kirei only reads previews on this device and never sends anything.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst ihn in den Einstellungen einschalten. Kirei liest nur Vorschaubilder auf diesem Gerät und sendet nichts."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

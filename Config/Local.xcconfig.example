@@ -1,0 +1,5 @@
+// Kopie als Config/Local.xcconfig anlegen. Die Datei bleibt außerhalb von Git.
+// Die Team-ID steht in Xcode unter Settings > Accounts, auch für das kostenlose
+// persönliche Team.
+
+DEVELOPMENT_TEAM = ABCDE12345

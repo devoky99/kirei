@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Pflicht im Mac App Store. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!-- Zugriff auf die Systemmediathek. -->
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
+	<!-- Absichtlich fehlt com.apple.security.network.client: kein Netz. -->
+</dict>
+</plist>

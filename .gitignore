@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.xcarchive
+*.ipa
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Persönliche Einstellungen (Team-ID)
+Config/Local.xcconfig
+
+# Testbilder und Prüfstand-Daten bleiben lokal, nie im Repo.
+Testdaten/
+Test-Mediathek/
+*.pruefstand.json

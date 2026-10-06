@@ -1,0 +1,27 @@
+# Baut und testet bei jedem Push auf iOS und macOS.
+# Öffentliches Repo: die macOS-Rechner von GitHub sind dafür kostenlos.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: iOS und macOS
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode-Version
+        run: xcodebuild -version
+
+      - name: Bauen und testen
+        run: scripts/test-all.sh

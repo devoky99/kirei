@@ -1,0 +1,267 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4B1E0000000000000000A00E /* KireiCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1E0000000000000000A010 /* KireiCore */; };
+		4B1E0000000000000000A00F /* KireiUI in Frameworks */ = {isa = PBXBuildFile; productRef = 4B1E0000000000000000A011 /* KireiUI */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		4B1E0000000000000000A003 /* Kirei.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kirei.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4B1E0000000000000000A004 /* Kirei.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Kirei.xcconfig; sourceTree = "<group>"; };
+		4B1E0000000000000000A005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4B1E0000000000000000A006 /* Kirei-macOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Kirei-macOS.entitlements"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		4B1E0000000000000000A007 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4B1E0000000000000000A00B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4B1E0000000000000000A00E /* KireiCore in Frameworks */,
+				4B1E0000000000000000A00F /* KireiUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4B1E0000000000000000A008 = {
+			isa = PBXGroup;
+			children = (
+				4B1E0000000000000000A007 /* App */,
+				4B1E0000000000000000A00A /* Config */,
+				4B1E0000000000000000A009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4B1E0000000000000000A009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4B1E0000000000000000A003 /* Kirei.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4B1E0000000000000000A00A /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				4B1E0000000000000000A004 /* Kirei.xcconfig */,
+				4B1E0000000000000000A005 /* Info.plist */,
+				4B1E0000000000000000A006 /* Kirei-macOS.entitlements */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4B1E0000000000000000A002 /* Kirei */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4B1E0000000000000000A014 /* Build configuration list for PBXNativeTarget "Kirei" */;
+			buildPhases = (
+				4B1E0000000000000000A00C /* Sources */,
+				4B1E0000000000000000A00B /* Frameworks */,
+				4B1E0000000000000000A00D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				4B1E0000000000000000A007 /* App */,
+			);
+			name = Kirei;
+			packageProductDependencies = (
+				4B1E0000000000000000A010 /* KireiCore */,
+				4B1E0000000000000000A011 /* KireiUI */,
+			);
+			productName = Kirei;
+			productReference = 4B1E0000000000000000A003 /* Kirei.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4B1E0000000000000000A001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					4B1E0000000000000000A002 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 4B1E0000000000000000A013 /* Build configuration list for PBXProject "Kirei" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				de,
+			);
+			mainGroup = 4B1E0000000000000000A008;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4B1E0000000000000000A012 /* XCLocalSwiftPackageReference "Packages/KireiKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4B1E0000000000000000A009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4B1E0000000000000000A002 /* Kirei */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4B1E0000000000000000A00D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4B1E0000000000000000A00C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4B1E0000000000000000A015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		4B1E0000000000000000A016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		4B1E0000000000000000A017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4B1E0000000000000000A004 /* Kirei.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		4B1E0000000000000000A018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4B1E0000000000000000A004 /* Kirei.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4B1E0000000000000000A013 /* Build configuration list for PBXProject "Kirei" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4B1E0000000000000000A015 /* Debug */,
+				4B1E0000000000000000A016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4B1E0000000000000000A014 /* Build configuration list for PBXNativeTarget "Kirei" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4B1E0000000000000000A017 /* Debug */,
+				4B1E0000000000000000A018 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		4B1E0000000000000000A012 /* XCLocalSwiftPackageReference "Packages/KireiKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/KireiKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4B1E0000000000000000A010 /* KireiCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B1E0000000000000000A012 /* XCLocalSwiftPackageReference "Packages/KireiKit" */;
+			productName = KireiCore;
+		};
+		4B1E0000000000000000A011 /* KireiUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4B1E0000000000000000A012 /* XCLocalSwiftPackageReference "Packages/KireiKit" */;
+			productName = KireiUI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 4B1E0000000000000000A001 /* Project object */;
+}

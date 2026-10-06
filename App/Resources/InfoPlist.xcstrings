@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSPhotoLibraryUsageDescription": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kirei braucht Zugriff auf deine Fotos, um Duplikate und ähnliche Bilder zu finden. Nichts verlässt dein Gerät."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kirei needs access to your photos to find duplicates and similar pictures. Nothing leaves your device."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
