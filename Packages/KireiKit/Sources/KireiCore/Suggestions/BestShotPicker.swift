@@ -79,8 +79,18 @@ public enum BestShotPicker {
 
         for member in others {
             let bytes = SizeEstimator.estimatedBytes(for: member.record)
+            var distance: Float?
+            if let print = member.photo.featurePrint, let keepPrint = keep.photo.featurePrint {
+                distance = print.distance(to: keepPrint)
+            }
             if let protection = settings.protection.reason(for: member.record) {
-                items.append(SuggestionItem(assetID: member.record.id, role: .keep, reasons: [.protected(protection)], estimatedBytes: bytes))
+                items.append(SuggestionItem(
+                    assetID: member.record.id,
+                    role: .keep,
+                    reasons: [.protected(protection)],
+                    estimatedBytes: bytes,
+                    distanceToKeep: distance
+                ))
                 continue
             }
             var reasons: [SuggestionReason] = [.nearlyIdentical]
@@ -90,7 +100,13 @@ public enum BestShotPicker {
             if keep.photo.sharpness > 0 && member.photo.sharpness < keep.photo.sharpness * settings.lessSharpFactor {
                 reasons.append(.lessSharp)
             }
-            items.append(SuggestionItem(assetID: member.record.id, role: .remove, reasons: reasons, estimatedBytes: bytes))
+            items.append(SuggestionItem(
+                assetID: member.record.id,
+                role: .remove,
+                reasons: reasons,
+                estimatedBytes: bytes,
+                distanceToKeep: distance
+            ))
         }
 
         guard items.contains(where: { $0.role == .remove }) else { return nil }

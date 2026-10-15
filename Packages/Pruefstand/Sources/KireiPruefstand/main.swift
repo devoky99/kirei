@@ -13,6 +13,9 @@ Prüfstand für Kirei
   kirei-pruefstand beispiel <Ordner>
       Legt erzeugte Beispielbilder an, um die Befehle auszuprobieren.
 
+  kirei-pruefstand last [Anzahl]
+      Lasttest des Kerns mit erzeugten Einträgen (Standard 20.000), ohne Vision.
+
   kirei-pruefstand messen <Ordner>
       Misst die Zeit pro Foto und rechnet auf 20.000 Fotos hoch.
 
@@ -65,6 +68,9 @@ case "beispiel":
     let target = URL(filePath: (arguments[1] as NSString).expandingTildeInPath, directoryHint: .isDirectory)
     try? FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
     status = Beispiel.run(folder: target.standardizedFileURL)
+case "last":
+    let count = arguments.count >= 2 ? Int(arguments[1]) ?? 20_000 : 20_000
+    status = await Last.run(count: count)
 case "messen":
     status = await Messen.run(folder: Hilfe.ordner(arguments))
 case "kalibrieren":

@@ -67,3 +67,20 @@ jobs:
         if: always()
         run: |
           if [ -f probelauf.log ]; then python3 scripts/ci-annotate.py --notice "Prüfstand-Probelauf" probelauf.log; fi
+
+      # Misst den Kern mit 20.000 und 100.000 erzeugten Einträgen, ohne Vision.
+      - name: Lasttest
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          set -o pipefail
+          for n in 20000 100000; do
+            swift run -c release --package-path Packages/Pruefstand kirei-pruefstand last $n 2>&1 \
+              | grep --line-buffered -v -E '^\[|Building|Build of product|Write |Compiling|Linking' | tee -a lasttest.log
+          done
+
+      - name: Lasttest anzeigen
+        if: always()
+        run: |
+          if [ -f lasttest.log ]; then python3 scripts/ci-annotate.py --notice "Lasttest" lasttest.log; fi

@@ -202,6 +202,11 @@ struct LibraryScannerTests {
         #expect(results.groups(in: .blurry).isEmpty)
         #expect(results.counts == AnalysisCounts(analyzable: 8, processed: 8, unavailable: 1))
         #expect(await counter.count == 7)
+
+        let metrics = try #require(results.metrics)
+        #expect(metrics.analyzedInThisRun == 7)
+        #expect(metrics.peakMemoryBytes > 0)
+        #expect(metrics.firstResultsSeconds <= metrics.totalSeconds)
         #expect(await log.sawRecords)
         #expect(await log.partialResults >= 1)
     }
@@ -218,5 +223,6 @@ struct LibraryScannerTests {
 
         #expect(await counter.count == analysesAfterFirst)
         #expect(second.groups == first.groups)
+        #expect(second.metrics?.analyzedInThisRun == 0)
     }
 }

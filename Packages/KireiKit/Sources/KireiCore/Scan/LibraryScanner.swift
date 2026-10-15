@@ -53,6 +53,7 @@ public actor LibraryScanner {
         defer { ProcessInfo.processInfo.endActivity(activity) }
 
         let version = analyzer.version
+        let started = Date()
 
         // 1. Metadaten
         await onUpdate(.progress(ScanProgress(stage: .reading)))
@@ -70,12 +71,15 @@ public actor LibraryScanner {
             counts: counts,
             isComplete: false
         )))
+        let firstResults = Date().timeIntervalSince(started)
 
         try await index.sync(records)
         try await index.retryUnavailable()
 
         // 2. Bildanalyse in Etappen
-        try await analyzePending(version: version, onUpdate: onUpdate)
+        let analysisStarted = Date()
+        let analyzedInThisRun = try await analyzePending(version: version, onUpdate: onUpdate)
+        let analysisSeconds = Date().timeIntervalSince(analysisStarted)
         counts = try await index.analysisCounts(version: version)
 
         // 3. Duplikate und ähnliche Fotos
@@ -147,7 +151,14 @@ public actor LibraryScanner {
             groups: SuggestionBuilder.ordered(groups),
             summary: summary,
             counts: counts,
-            isComplete: true
+            isComplete: true,
+            metrics: ScanMetrics(
+                firstResultsSeconds: firstResults,
+                analysisSeconds: analysisSeconds,
+                analyzedInThisRun: analyzedInThisRun,
+                totalSeconds: Date().timeIntervalSince(started),
+                peakMemoryBytes: MemoryUsage.peakResidentBytes()
+            )
         )
         await onUpdate(.progress(ScanProgress(stage: .finished)))
         await onUpdate(.results(results))
@@ -156,8 +167,10 @@ public actor LibraryScanner {
 
     // MARK: Bildanalyse
 
-    private func analyzePending(version: Int, onUpdate: @escaping @Sendable (ScanUpdate) async -> Void) async throws {
+    /// Analysiert alle offenen Fotos und sagt, wie viele davon ein Ergebnis bekamen.
+    private func analyzePending(version: Int, onUpdate: @escaping @Sendable (ScanUpdate) async -> Void) async throws -> Int {
         var counts = try await index.analysisCounts(version: version)
+        var analyzed = 0
         while true {
             try Task.checkCancellation()
             let ids = try await index.pendingAnalysis(version: version, limit: Self.batchSize)
@@ -168,7 +181,9 @@ public actor LibraryScanner {
             let outcomes = await Self.analyzeBatch(ids, source: source, analyzer: analyzer, parallelism: parallelism)
             try await index.save(analyses: outcomes, version: version)
             counts.processed += outcomes.count
+            analyzed += outcomes.filter { $0.analysis != nil }.count
         }
+        return analyzed
     }
 
     /// Wie viel parallel gerechnet wird. Bei kritischer Temperatur wird pausiert.

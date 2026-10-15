@@ -55,6 +55,17 @@ struct ScanOverviewView: View {
                         Image(systemName: "square.grid.3x3")
                     }
                 }
+                #if DEBUG
+                NavigationLink {
+                    ReviewView()
+                } label: {
+                    Label {
+                        Text(verbatim: "Prüfmodus (nur Entwicklung)")
+                    } icon: {
+                        Image(systemName: "checkmark.seal")
+                    }
+                }
+                #endif
             }
         }
         .navigationDestination(for: SuggestionCategory.self) { category in

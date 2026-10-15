@@ -70,8 +70,12 @@ final class LibraryModel {
         }
     }
 
-    func thumbnail(for id: AssetID, pixelSize: Int = ScanPolicy.gridThumbnailPixelSize) async -> Thumbnail? {
-        await source.thumbnail(for: id, maxPixelSize: pixelSize, mode: .fill)
+    func thumbnail(
+        for id: AssetID,
+        pixelSize: Int = ScanPolicy.gridThumbnailPixelSize,
+        mode: ThumbnailMode = .fill
+    ) async -> Thumbnail? {
+        await source.thumbnail(for: id, maxPixelSize: pixelSize, mode: mode)
     }
 
     private func apply(_ update: ScanUpdate) {

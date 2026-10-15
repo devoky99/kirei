@@ -66,8 +66,13 @@ public actor AssetIndex {
 
     /// Ablage in Kireis eigenem Ordner, ohne Backup und ohne CloudKit.
     public static func standard() throws -> AssetIndex {
+        try onDisk(directory: KireiStorage.directory())
+    }
+
+    /// Ablage in einem bestimmten Ordner, etwa für Lasttests im Prüfstand.
+    public static func onDisk(directory: URL) throws -> AssetIndex {
         let configuration = ModelConfiguration(
-            url: try KireiStorage.directory().appending(path: "index.store"),
+            url: directory.appending(path: "index.store"),
             cloudKitDatabase: .none
         )
         let container = try ModelContainer(for: IndexedAsset.self, configurations: configuration)

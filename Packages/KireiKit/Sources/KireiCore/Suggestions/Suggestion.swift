@@ -44,6 +44,29 @@ public enum SuggestionReason: Sendable, Hashable {
     case screenshot(ageInDays: Int)
     case screenRecording(seconds: Int)
     case largeVideo(estimatedBytes: Int64)
+
+    /// Feste Kennung ohne Sprache, für Export und Auswertung.
+    public var code: String {
+        switch self {
+        case .bestOfGroup: "bestOfGroup"
+        case .sharpest: "sharpest"
+        case .eyesOpen: "eyesOpen"
+        case .original: "original"
+        case .burstSelection: "burstSelection"
+        case .protected(.favorite): "protectedFavorite"
+        case .protected(.edited): "protectedEdited"
+        case .protected(.inAlbum): "protectedInAlbum"
+        case .exactCopy: "exactCopy"
+        case .nearlyIdentical: "nearlyIdentical"
+        case .lessSharp: "lessSharp"
+        case .eyesClosed: "eyesClosed"
+        case .unselectedBurstFrame: "unselectedBurstFrame"
+        case .blurry: "blurry"
+        case .screenshot: "screenshot"
+        case .screenRecording: "screenRecording"
+        case .largeVideo: "largeVideo"
+        }
+    }
 }
 
 /// Ein Foto oder Video in einer Gruppe.
@@ -54,6 +77,8 @@ public struct SuggestionItem: Identifiable, Sendable, Hashable {
     /// Nur bestätigte exakte Duplikate sind vorausgewählt.
     public let isPreselected: Bool
     public let estimatedBytes: Int64
+    /// Abstand der Merkmalsvektoren zum behaltenen Foto, nur bei „ähnlich“.
+    public let distanceToKeep: Float?
 
     public var id: AssetID { assetID }
 
@@ -62,13 +87,15 @@ public struct SuggestionItem: Identifiable, Sendable, Hashable {
         role: SuggestionRole,
         reasons: [SuggestionReason],
         isPreselected: Bool = false,
-        estimatedBytes: Int64 = 0
+        estimatedBytes: Int64 = 0,
+        distanceToKeep: Float? = nil
     ) {
         self.assetID = assetID
         self.role = role
         self.reasons = reasons
         self.isPreselected = isPreselected && role == .remove
         self.estimatedBytes = estimatedBytes
+        self.distanceToKeep = distanceToKeep
     }
 }
 

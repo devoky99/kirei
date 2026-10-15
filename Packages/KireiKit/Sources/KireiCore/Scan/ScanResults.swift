@@ -32,6 +32,39 @@ public struct ScanProgress: Sendable, Equatable {
     }
 }
 
+/// Messwerte eines Scans für Prüfpunkt 1.
+public struct ScanMetrics: Sendable, Equatable {
+    /// Bis die ersten Vorschläge da waren. Ziel: unter 10 Sekunden.
+    public var firstResultsSeconds: Double
+    /// Dauer der Bildanalyse in diesem Durchlauf.
+    public var analysisSeconds: Double
+    /// In diesem Durchlauf analysierte Fotos, ohne die bereits bekannten.
+    public var analyzedInThisRun: Int
+    public var totalSeconds: Double
+    /// Höchster Speicherbedarf des Prozesses bisher. Ziel: unter 300 MB.
+    public var peakMemoryBytes: Int64
+
+    public init(
+        firstResultsSeconds: Double,
+        analysisSeconds: Double,
+        analyzedInThisRun: Int,
+        totalSeconds: Double,
+        peakMemoryBytes: Int64
+    ) {
+        self.firstResultsSeconds = firstResultsSeconds
+        self.analysisSeconds = analysisSeconds
+        self.analyzedInThisRun = analyzedInThisRun
+        self.totalSeconds = totalSeconds
+        self.peakMemoryBytes = peakMemoryBytes
+    }
+
+    /// Analysezeit hochgerechnet auf eine Anzahl Fotos, `nil` ohne Analyse.
+    public func projectedAnalysisSeconds(for photos: Int) -> Double? {
+        guard analyzedInThisRun > 0 else { return nil }
+        return analysisSeconds / Double(analyzedInThisRun) * Double(photos)
+    }
+}
+
 /// Alle Vorschläge eines Scans.
 public struct ScanResults: Sendable, Equatable {
     public var groups: [SuggestionGroup]
@@ -39,12 +72,21 @@ public struct ScanResults: Sendable, Equatable {
     public var counts: AnalysisCounts
     /// `false`, solange die Bildanalyse noch läuft.
     public var isComplete: Bool
+    /// Nur im Endergebnis.
+    public var metrics: ScanMetrics?
 
-    public init(groups: [SuggestionGroup], summary: LibrarySummary, counts: AnalysisCounts, isComplete: Bool) {
+    public init(
+        groups: [SuggestionGroup],
+        summary: LibrarySummary,
+        counts: AnalysisCounts,
+        isComplete: Bool,
+        metrics: ScanMetrics? = nil
+    ) {
         self.groups = groups
         self.summary = summary
         self.counts = counts
         self.isComplete = isComplete
+        self.metrics = metrics
     }
 
     public static let empty = ScanResults(
