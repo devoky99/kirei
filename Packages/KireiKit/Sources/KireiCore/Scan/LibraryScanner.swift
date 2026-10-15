@@ -102,7 +102,8 @@ public actor LibraryScanner {
                 if SuggestionBuilder.isBlurry(photo, settings: settings) {
                     blurCandidates.append(photo)
                 }
-                if let candidate = GroupingCandidate(photo: photo) {
+                // Serien haben ihre eigene Kategorie und tauchen hier nicht doppelt auf.
+                if record.burstIdentifier == nil, let candidate = GroupingCandidate(photo: photo) {
                     grouper.add(candidate)
                 }
             }

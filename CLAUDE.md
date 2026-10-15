@@ -21,8 +21,14 @@ Versprechen: einmal kaufen, alles auf dem Gerät, nichts sammeln, lieber ein Vor
   - Der Ordner ist mit Xcode synchronisiert: neue Dateien einfach anlegen, nicht in der Projektdatei eintragen.
 - `Packages/KireiKit/`
   - `KireiCore`: entscheidet über Fotos und kennt kein UIKit, AppKit oder SwiftUI. Bildtyp ist `CGImage`, Fotos kommen über das Protokoll `PhotoSource`.
+    - `Sources/`: Fotoquelle (`PhotoKitSource`), Prüfsummen lokaler Originale (`PhotoKitContentHasher`), Änderungs-Token.
+    - `Analysis/`: `VisionAnalyzer` (Feature Print Revision 2, Ästhetik-Score, Gesichter), `FeaturePrint` (8 Bit pro Wert), `SharpnessMeter`, `EyeOpenness`.
+    - `Index/`: lokaler Index in SwiftData (`AssetIndex`), nie in iCloud.
+    - `Suggestions/`: `DuplicateFinder`, `SimilarityGrouper`, `BestShotPicker`, `SuggestionBuilder` (Serien, Bildschirmfotos, Bildschirmaufnahmen, große Videos, unscharf), alle Schwellen in `SuggestionSettings`.
+    - `Scan/`: `LibraryScanner` steuert den Ablauf, `ScanPolicy` die Grundsätze, `AnalysisThrottle` die Rücksicht auf Temperatur und Stromsparmodus.
+    - `Quality/`: Trefferquote mit Untergrenze (`PrecisionEstimate`) und Kalibrierung der Schwellen.
   - `KireiUI`: gemeinsame SwiftUI-Bausteine und Gestaltungswerte (`KireiTheme`).
-- `Packages/Pruefstand/`: Kommandozeilen-Werkzeug für den Mac, misst den Kern mit Testbildern statt Mediathek.
+- `Packages/Pruefstand/`: Kommandozeilen-Werkzeug für den Mac, misst den Kern mit Testbildern statt Mediathek (Befehle unten).
 - `Config/`: Einstellungen (`Kirei.xcconfig`), Info.plist-Ergänzungen, Mac-Berechtigungen. Die Mac-Sandbox hat absichtlich keine Netz-Berechtigung.
 
 ## Regeln für Code
@@ -33,6 +39,10 @@ Versprechen: einmal kaufen, alles auf dem Gerät, nichts sammeln, lieber ein Vor
 - Keine Fremdbibliotheken ohne Rückfrage. Keine nicht dokumentierten APIs ohne Hinweis auf das Prüfrisiko.
 - Datenschutz-Manifest (`App/Resources/PrivacyInfo.xcprivacy`) aktualisieren, sobald eine Schnittstelle mit Pflichtbegründung dazukommt.
 - Testbilder und Test-Mediathek nie ins Repo. Das Repo ist öffentlich.
+- Schwellen stehen nur in `SuggestionSettings` und ändern sich nur nach einem Prüfstand-Lauf (`kalibrieren`, `vorschlaege`, `auswerten`).
+- Ändert sich die Bildanalyse, steigt `VisionAnalyzer.version`. Dann rechnet der Index alles neu.
+- Begründungen kommen als `SuggestionReason` aus dem Kern. Die Texte dazu stehen in `App/Shared/SuggestionTexts.swift`, die deutschen Texte des Prüfstands in `Packages/Pruefstand/.../Hilfen.swift`.
+- Der GitHub-Build nimmt das neueste fertige Xcode und zeigt Fehler, Warnungen und die Testzahl als Anmerkungen am Commit.
 
 ## Texte
 
@@ -57,5 +67,11 @@ Eine Aufgabe ist erst erledigt, wenn alles stimmt, auf beiden Plattformen:
 ```sh
 scripts/test-all.sh                                   # alles bauen und testen
 swift test --package-path Packages/KireiKit           # nur Kern-Tests auf dem Mac
-swift run --package-path Packages/Pruefstand kirei-pruefstand <Ordner>
+
+# Prüfstand (Befehle ohne Argument zeigen die Hilfe)
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand selbsttest
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand messen <Ordner>
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand kalibrieren <Ordner>
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand vorschlaege <Ordner>
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand auswerten <Datei.csv>
 ```

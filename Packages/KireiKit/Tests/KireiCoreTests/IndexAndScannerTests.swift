@@ -132,6 +132,9 @@ struct LibraryScannerTests {
             photo("d1", at: 1_000),
             photo("d2", at: 1_000),
             photo("cloud", at: 1_500),
+            // Zwei sichtbare Bilder einer Serie: gehören zu „Serien“, nicht zu „ähnlich“.
+            AssetRecord(id: AssetID("b1"), kind: .photo, traits: [.burst, .burstRepresentative], creationDate: Date(timeIntervalSinceReferenceDate: 800_003_000), burstIdentifier: "serie"),
+            AssetRecord(id: AssetID("b2"), kind: .photo, traits: [.burst, .burstUserPick], creationDate: Date(timeIntervalSinceReferenceDate: 800_003_001), burstIdentifier: "serie"),
             AssetRecord(
                 id: AssetID("shot"),
                 kind: .photo,
@@ -155,6 +158,8 @@ struct LibraryScannerTests {
             AssetID("p3"): analysis(testPrint(axis: 4)),
             AssetID("d1"): analysis(testPrint(axis: 2)),
             AssetID("d2"): analysis(testPrint(axis: 2)),
+            AssetID("b1"): analysis(testPrint(axis: 6)),
+            AssetID("b2"): analysis(testPrint(axis: 6, nudge: 0.05)),
         ])
         let now = now
         return LibraryScanner(
@@ -188,8 +193,9 @@ struct LibraryScannerTests {
         let preselected = results.groups.flatMap(\.items).filter(\.isPreselected)
         #expect(preselected.allSatisfy { $0.reasons == [.exactCopy] })
 
-        #expect(results.counts == AnalysisCounts(analyzable: 6, processed: 6, unavailable: 1))
-        #expect(await counter.count == 5)
+        #expect(results.groups(in: .similar).count == 1)
+        #expect(results.counts == AnalysisCounts(analyzable: 8, processed: 8, unavailable: 1))
+        #expect(await counter.count == 7)
         #expect(await log.sawRecords)
         #expect(await log.partialResults >= 1)
     }

@@ -20,3 +20,6 @@ Config/Local.xcconfig
 Testdaten/
 Test-Mediathek/
 *.pruefstand.json
+kirei-vorschlaege.*
+kirei-urteile*.csv
+kirei-kalibrierung.txt
