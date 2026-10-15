@@ -49,6 +49,10 @@ struct AssetIndexTests {
 
         // Eine neue Analyseversion rechnet alles neu.
         #expect(try await index.pendingAnalysis(version: 2, limit: 10).count == 2)
+
+        // Ohne Vorschaubild wird es beim nächsten Scan erneut versucht.
+        try await index.retryUnavailable()
+        #expect(try await index.pendingAnalysis(version: 1, limit: 10) == [AssetID("old")])
     }
 
     @Test("Bearbeitete Fotos werden neu analysiert")
@@ -159,7 +163,8 @@ struct LibraryScannerTests {
             AssetID("d1"): analysis(testPrint(axis: 2)),
             AssetID("d2"): analysis(testPrint(axis: 2)),
             AssetID("b1"): analysis(testPrint(axis: 6)),
-            AssetID("b2"): analysis(testPrint(axis: 6, nudge: 0.05)),
+            // Unscharf, aber als Serienbild nicht unter „unscharf“.
+            AssetID("b2"): ImageAnalysis(featurePrint: testPrint(axis: 6, nudge: 0.05), aestheticScore: -0.8, isUtility: false, sharpness: 5),
         ])
         let now = now
         return LibraryScanner(
@@ -194,6 +199,7 @@ struct LibraryScannerTests {
         #expect(preselected.allSatisfy { $0.reasons == [.exactCopy] })
 
         #expect(results.groups(in: .similar).count == 1)
+        #expect(results.groups(in: .blurry).isEmpty)
         #expect(results.counts == AnalysisCounts(analyzable: 8, processed: 8, unavailable: 1))
         #expect(await counter.count == 7)
         #expect(await log.sawRecords)

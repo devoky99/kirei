@@ -28,8 +28,6 @@ public struct SuggestionSettings: Sendable, Equatable {
     /// Höchster Abstand der Merkmalsvektoren für „fast gleich“.
     /// Vision Revision 2: ähnliche Bilder liegen meist unter 0,4 bis 0,6.
     public var similarDistance: Float = 0.30
-    /// Abstand für „wahrscheinlich eine Kopie“, wenn kein Original lokal liegt.
-    public var probableCopyDistance: Float = 0.05
     /// Längste Pause zwischen zwei Fotos derselben Gruppe.
     public var similarMaxGap: TimeInterval = 60
     /// Längste Dauer einer Gruppe vom ersten bis zum letzten Foto.

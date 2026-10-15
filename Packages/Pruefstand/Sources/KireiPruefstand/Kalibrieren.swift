@@ -10,6 +10,8 @@ import KireiCore
 ///   augen_zu/  augen_offen/
 enum Kalibrieren {
     static let target = 0.98
+    /// Große Serien ergeben sehr viele, voneinander abhängige Paare. Begrenzen.
+    static let maximumSeriesSize = 30
 
     static func run(folder: URL) async -> Int32 {
         let source = FolderPhotoSource(folder: folder)
@@ -93,7 +95,11 @@ enum Kalibrieren {
         var distances: [Double] = []
         for folder in series.sorted(by: { $0.path < $1.path }) where (try? folder.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
             var prints: [FeaturePrint] = []
-            for file in source.imageFiles(in: folder) {
+            let files = source.imageFiles(in: folder)
+            if files.count > maximumSeriesSize {
+                print("Hinweis: \(source.relativePath(of: folder)) hat \(files.count) Fotos, gezählt werden die ersten \(maximumSeriesSize).")
+            }
+            for file in files.prefix(maximumSeriesSize) {
                 let id = AssetID(source.relativePath(of: file))
                 if let thumbnail = await source.thumbnail(for: id, maxPixelSize: ScanPolicy.analysisThumbnailPixelSize, mode: .fit),
                    let print = try? await analyzer.analyze(thumbnail).featurePrint {
@@ -178,7 +184,7 @@ enum Kalibrieren {
             let point = recommendation.point
             lines.append("Empfehlung \(settingName) = \(Zahl.komma(point.threshold, stellen: 3)): findet \(Zahl.prozent(point.recall)) der \(positiveName), \(point.falsePositives) Fehler, Untergrenze \(Zahl.prozent(point.estimate.lowerBound))")
             if !recommendation.isStatisticallySafe {
-                lines.append("  Ohne Fehler, aber noch zu wenige Beispiele für eine sichere Aussage (Ziel: Untergrenze \(Zahl.prozent(target))).")
+                lines.append("  Ohne Fehler, aber noch zu wenige Beispiele für eine sichere Aussage (mindestens 100 je Seite, Ziel: Untergrenze \(Zahl.prozent(target))).")
             }
         } else {
             lines.append("Keine Schwelle ohne Fehler gefunden. Mehr Beispiele markieren oder Markierungen prüfen.")

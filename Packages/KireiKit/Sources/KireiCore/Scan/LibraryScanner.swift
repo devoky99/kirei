@@ -56,8 +56,8 @@ public actor LibraryScanner {
         let records = try await source.fetchRecords()
         await onUpdate(.records(records))
         let recordsByID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        try await index.sync(records)
 
+        // Erste Ergebnisse nur aus Metadaten, noch vor dem Abgleich mit dem Index.
         let summary = LibrarySummary(records: records)
         let metadataGroups = SuggestionBuilder.metadataGroups(records: records, settings: settings, now: now())
         var counts = try await index.analysisCounts(version: version)
@@ -68,6 +68,9 @@ public actor LibraryScanner {
             isComplete: false
         )))
 
+        try await index.sync(records)
+        try await index.retryUnavailable()
+
         // 2. Bildanalyse in Etappen
         try await analyzePending(version: version, onUpdate: onUpdate)
         counts = try await index.analysisCounts(version: version)
@@ -77,14 +80,14 @@ public actor LibraryScanner {
         let candidates = DuplicateFinder.candidates(in: records)
         let candidateIDs = candidates.flatMap { $0.map(\.id) }
         let hashes = try await contentHashes(for: candidateIDs)
-        let candidatePrints = try await index.featurePrints(for: candidateIDs)
-        let duplicateGroups = DuplicateFinder.resolve(
-            candidates: candidates,
-            hashes: hashes,
-            prints: candidatePrints,
-            settings: settings
+        let duplicateGroups = DuplicateFinder.resolve(candidates: candidates, hashes: hashes, settings: settings)
+
+        // Jedes Foto erscheint nur in einer Kategorie: Mitglieder von Duplikat-
+        // und Seriengruppen werden weder als ähnlich noch als unscharf vorgeschlagen.
+        let handledElsewhere = Set(
+            (duplicateGroups + metadataGroups.filter { $0.category == .bursts })
+                .flatMap { $0.items.map(\.assetID) }
         )
-        let suggestedCopies = Set(duplicateGroups.flatMap { $0.suggested.map(\.assetID) })
 
         var grouper = SimilarityGrouper(settings: settings)
         var clusters: [SimilarityGrouper.Cluster] = []
@@ -96,14 +99,15 @@ public actor LibraryScanner {
             if page.isEmpty { break }
             offset += page.count
             for photo in page {
+                // Serienbilder haben ihre eigene Kategorie.
                 guard let record = recordsByID[photo.id], record.isAnalyzable,
-                      !suggestedCopies.contains(photo.id)
+                      record.burstIdentifier == nil,
+                      !handledElsewhere.contains(photo.id)
                 else { continue }
                 if SuggestionBuilder.isBlurry(photo, settings: settings) {
                     blurCandidates.append(photo)
                 }
-                // Serien haben ihre eigene Kategorie und tauchen hier nicht doppelt auf.
-                if record.burstIdentifier == nil, let candidate = GroupingCandidate(photo: photo) {
+                if let candidate = GroupingCandidate(photo: photo) {
                     grouper.add(candidate)
                 }
             }
@@ -260,8 +264,9 @@ public actor LibraryScanner {
         ) else {
             return FaceOutcome(id: id, faces: nil)
         }
+        // Bei einem Fehler bleibt das Foto offen und wird beim nächsten Scan versucht.
         let faces = try? await analyzer.analyzeFaces(thumbnail)
-        return FaceOutcome(id: id, faces: faces ?? FaceSummary.none)
+        return FaceOutcome(id: id, faces: faces)
     }
 
     // MARK: Prüfsummen

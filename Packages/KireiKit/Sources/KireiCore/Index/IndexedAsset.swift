@@ -6,6 +6,9 @@ import SwiftData
 /// Bleibt im App-Container, wird nie synchronisiert und nie gesendet.
 @Model
 final class IndexedAsset {
+    // Schnelle Abfragen nach offenen Analysen und nach Datum.
+    #Index<IndexedAsset>([\.analysisVersion], [\.sortDate], [\.analysisUnavailable])
+
     @Attribute(.unique) var assetID: String
     /// Aufnahmedatum, ohne Datum `distantPast`. Für die Sortierung.
     var sortDate: Date

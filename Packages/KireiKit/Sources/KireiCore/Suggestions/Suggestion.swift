@@ -36,7 +36,6 @@ public enum SuggestionReason: Sendable, Hashable {
 
     // Gründe für einen Vorschlag
     case exactCopy
-    case probableCopy
     case nearlyIdentical
     case lessSharp
     case eyesClosed

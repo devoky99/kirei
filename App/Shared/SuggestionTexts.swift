@@ -51,8 +51,6 @@ extension SuggestionReason {
             "In one of your albums, never suggested"
         case .exactCopy:
             "Exact copy"
-        case .probableCopy:
-            "Probably a copy (original in iCloud)"
         case .nearlyIdentical:
             "Almost the same as the photo you keep"
         case .lessSharp:

@@ -3,11 +3,14 @@ import Foundation
 /// Exakte Duplikate in zwei Schritten.
 ///
 /// 1. Kandidaten aus Metadaten: gleiche Art, gleiche Maße, gleiche Aufnahmezeit
-///    auf die Millisekunde, gleiche Dauer. Serienbilder sind ausgenommen.
-/// 2. Bestätigung über die Prüfsumme des lokalen Originals. Nur bestätigte
-///    Kopien werden vorausgewählt. Liegt ein Original nur in iCloud, gilt ein
-///    Kandidat bei fast identischem Merkmalsvektor als „wahrscheinlich eine
-///    Kopie“ und wird nicht vorausgewählt.
+///    auf die Millisekunde, gleiche Dauer, beide Live Photo oder beide nicht,
+///    beide bearbeitet oder beide nicht. Serienbilder sind ausgenommen.
+/// 2. Bestätigung über die Prüfsumme der lokalen Dateien. Nur bestätigte
+///    Kopien bilden eine Gruppe und werden vorausgewählt.
+///
+/// Liegt ein Original nur in iCloud, gibt es keine Prüfsumme und keine
+/// Duplikat-Gruppe. Fast gleiche Fotos findet dann „ähnlich“, mit Wahl des
+/// besten Fotos und ohne Vorauswahl.
 public enum DuplicateFinder {
     struct CandidateKey: Hashable {
         let kind: AssetKind
@@ -15,6 +18,8 @@ public enum DuplicateFinder {
         let height: Int
         let milliseconds: Int64
         let durationTenths: Int
+        let isLivePhoto: Bool
+        let hasAdjustments: Bool
     }
 
     /// Gruppen von Einträgen, die Kopien sein könnten.
@@ -27,7 +32,9 @@ public enum DuplicateFinder {
                 width: record.pixelWidth,
                 height: record.pixelHeight,
                 milliseconds: Int64((date.timeIntervalSinceReferenceDate * 1000).rounded()),
-                durationTenths: Int((record.duration * 10).rounded())
+                durationTenths: Int((record.duration * 10).rounded()),
+                isLivePhoto: record.traits.contains(.livePhoto),
+                hasAdjustments: record.hasAdjustments
             )
             buckets[key, default: []].append(record)
         }
@@ -37,85 +44,32 @@ public enum DuplicateFinder {
             .sorted { $0[0].id < $1[0].id }
     }
 
-    /// Bestätigt Kandidaten und baut Gruppen.
+    /// Bestätigt Kandidaten über gleiche Prüfsummen und baut Gruppen.
     public static func resolve(
         candidates: [[AssetRecord]],
         hashes: [AssetID: Data],
-        prints: [AssetID: FeaturePrint],
         settings: SuggestionSettings
     ) -> [SuggestionGroup] {
-        candidates.flatMap { bucket in
-            components(of: bucket, hashes: hashes, prints: prints, settings: settings)
-                .compactMap { makeGroup($0, hashes: hashes, settings: settings) }
-        }
-    }
-
-    /// Verbindet Einträge mit gleicher Prüfsumme oder, ohne Prüfsumme, mit fast
-    /// gleichem Merkmalsvektor. Verschiedene Prüfsummen landen nie in einer Gruppe.
-    static func components(
-        of bucket: [AssetRecord],
-        hashes: [AssetID: Data],
-        prints: [AssetID: FeaturePrint],
-        settings: SuggestionSettings
-    ) -> [[AssetRecord]] {
-        var parent = Array(bucket.indices)
-        var hashSets: [Set<Data>] = bucket.map { record in
-            hashes[record.id].map { [$0] } ?? []
-        }
-
-        func root(_ index: Int) -> Int {
-            var current = index
-            while parent[current] != current {
-                current = parent[current]
-            }
-            return current
-        }
-
-        func join(_ a: Int, _ b: Int) {
-            let rootA = root(a)
-            let rootB = root(b)
-            guard rootA != rootB else { return }
-            let merged = hashSets[rootA].union(hashSets[rootB])
-            guard merged.count <= 1 else { return }
-            parent[rootB] = rootA
-            hashSets[rootA] = merged
-        }
-
-        for i in bucket.indices {
-            for j in bucket.indices where j > i {
-                let first = bucket[i].id
-                let second = bucket[j].id
-                if let hashA = hashes[first], let hashB = hashes[second] {
-                    if hashA == hashB { join(i, j) }
-                } else if let printA = prints[first], let printB = prints[second],
-                          printA.distance(to: printB) <= settings.probableCopyDistance {
-                    join(i, j)
+        candidates.flatMap { bucket -> [SuggestionGroup] in
+            var byHash: [Data: [AssetRecord]] = [:]
+            for record in bucket {
+                if let hash = hashes[record.id] {
+                    byHash[hash, default: []].append(record)
                 }
             }
+            return byHash.values
+                .filter { $0.count > 1 }
+                .sorted { $0[0].id < $1[0].id }
+                .compactMap { makeGroup($0, settings: settings) }
         }
-
-        var groups: [Int: [AssetRecord]] = [:]
-        for index in bucket.indices {
-            groups[root(index), default: []].append(bucket[index])
-        }
-        return groups.values
-            .filter { $0.count > 1 }
-            .sorted { $0[0].id < $1[0].id }
     }
 
-    static func makeGroup(
-        _ members: [AssetRecord],
-        hashes: [AssetID: Data],
-        settings: SuggestionSettings
-    ) -> SuggestionGroup? {
-        // Behalten: geschützt vor ungeschützt, mit Prüfsumme vor ohne, dann stabil nach Kennung.
+    static func makeGroup(_ members: [AssetRecord], settings: SuggestionSettings) -> SuggestionGroup? {
+        // Behalten: geschützt vor ungeschützt, dann stabil nach Kennung.
         let keep = members.min { a, b in
             let protectedA = settings.protection.reason(for: a) != nil
             let protectedB = settings.protection.reason(for: b) != nil
             if protectedA != protectedB { return protectedA }
-            let hashedA = hashes[a.id] != nil
-            let hashedB = hashes[b.id] != nil
-            if hashedA != hashedB { return hashedA }
             return a.id < b.id
         }
         guard let keep else { return nil }
@@ -135,16 +89,15 @@ public enum DuplicateFinder {
             let bytes = SizeEstimator.estimatedBytes(for: member)
             if let protection = settings.protection.reason(for: member) {
                 items.append(SuggestionItem(assetID: member.id, role: .keep, reasons: [.protected(protection)], estimatedBytes: bytes))
-                continue
+            } else {
+                items.append(SuggestionItem(
+                    assetID: member.id,
+                    role: .remove,
+                    reasons: [.exactCopy],
+                    isPreselected: true,
+                    estimatedBytes: bytes
+                ))
             }
-            let confirmed = hashes[member.id] != nil && hashes[member.id] == hashes[keep.id]
-            items.append(SuggestionItem(
-                assetID: member.id,
-                role: .remove,
-                reasons: [confirmed ? .exactCopy : .probableCopy],
-                isPreselected: confirmed,
-                estimatedBytes: bytes
-            ))
         }
 
         guard items.contains(where: { $0.role == .remove }) else { return nil }

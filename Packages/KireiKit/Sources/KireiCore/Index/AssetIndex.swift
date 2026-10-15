@@ -48,6 +48,8 @@ public struct AnalysisCounts: Sendable, Equatable {
 public actor AssetIndex {
     /// Wie viele Kennungen ein Filter höchstens auf einmal prüft.
     static let lookupChunk = 400
+    /// Nach so vielen Änderungen wird zwischengespeichert.
+    static let saveChunk = 2_000
 
     // MARK: Anlegen
 
@@ -62,18 +64,10 @@ public actor AssetIndex {
         return AssetIndex(modelContainer: container)
     }
 
-    /// Ablage unter „Application Support/Kirei“, nie in iCloud.
+    /// Ablage in Kireis eigenem Ordner, ohne Backup und ohne CloudKit.
     public static func standard() throws -> AssetIndex {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let directory = base.appending(path: "Kirei", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let configuration = ModelConfiguration(
-            url: directory.appending(path: "index.store"),
+            url: try KireiStorage.directory().appending(path: "index.store"),
             cloudKitDatabase: .none
         )
         let container = try ModelContainer(for: IndexedAsset.self, configurations: configuration)
@@ -83,9 +77,14 @@ public actor AssetIndex {
     // MARK: Abgleich mit der Mediathek
 
     /// Neue Einträge anlegen, geänderte zurücksetzen, verschwundene löschen.
+    ///
+    /// Lädt nur die Felder, die verglichen werden, nicht die Merkmalsvektoren.
+    /// Speichert in Paketen, damit auch 100.000 neue Einträge wenig Speicher brauchen.
     @discardableResult
     public func sync(_ records: [AssetRecord]) throws -> IndexSyncResult {
-        let existing = try modelContext.fetch(FetchDescriptor<IndexedAsset>())
+        var descriptor = FetchDescriptor<IndexedAsset>()
+        descriptor.propertiesToFetch = [\.assetID, \.sortDate, \.modificationDate, \.isAnalyzable]
+        let existing = try modelContext.fetch(descriptor)
         var byID: [String: IndexedAsset] = [:]
         byID.reserveCapacity(existing.count)
         for entry in existing {
@@ -94,6 +93,7 @@ public actor AssetIndex {
 
         var seen = Set<String>()
         var result = IndexSyncResult(inserted: 0, updated: 0, removed: 0)
+        var pending = 0
         for record in records {
             let key = record.id.rawValue
             guard seen.insert(key).inserted else { continue }
@@ -104,10 +104,16 @@ public actor AssetIndex {
                     || dateChanged {
                     entry.reset(with: record)
                     result.updated += 1
+                    pending += 1
                 }
             } else {
                 modelContext.insert(IndexedAsset(record: record))
                 result.inserted += 1
+                pending += 1
+            }
+            if pending >= Self.saveChunk {
+                try modelContext.save()
+                pending = 0
             }
         }
 
@@ -118,6 +124,19 @@ public actor AssetIndex {
 
         try modelContext.save()
         return result
+    }
+
+    /// Fotos ohne lokales Vorschaubild beim nächsten Durchlauf erneut versuchen.
+    /// Etwa wenn iCloud inzwischen ein Vorschaubild geladen hat.
+    public func retryUnavailable() throws {
+        let descriptor = FetchDescriptor<IndexedAsset>(
+            predicate: #Predicate<IndexedAsset> { $0.analysisUnavailable == true }
+        )
+        for entry in try modelContext.fetch(descriptor) {
+            entry.analysisVersion = 0
+            entry.analysisUnavailable = false
+        }
+        try modelContext.save()
     }
 
     // MARK: Bildanalyse
@@ -206,8 +225,8 @@ public actor AssetIndex {
     public func save(faces outcomes: [FaceOutcome], version: Int) throws {
         let entries = try entries(for: outcomes.map(\.id))
         for outcome in outcomes {
-            guard let entry = entries[outcome.id.rawValue] else { continue }
-            let faces = outcome.faces ?? .none
+            // Ohne Vorschaubild bleibt der Eintrag offen und wird beim nächsten Scan versucht.
+            guard let entry = entries[outcome.id.rawValue], let faces = outcome.faces else { continue }
             entry.faceVersion = version
             entry.faceCount = faces.faceCount
             entry.minEyeOpenness = faces.minEyeOpenness

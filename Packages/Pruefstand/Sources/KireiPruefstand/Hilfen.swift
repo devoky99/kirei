@@ -2,6 +2,13 @@ import CoreGraphics
 import Foundation
 import KireiCore
 
+/// Schreibt sofort, auch wenn die Ausgabe in eine Datei oder Pipe geht.
+/// Ersetzt im Prüfstand das gepufferte `print` der Standardbibliothek.
+func print(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+    let text = items.map { String(describing: $0) }.joined(separator: separator) + terminator
+    FileHandle.standardOutput.write(Data(text.utf8))
+}
+
 /// Zahlen mit deutschem Komma.
 enum Zahl {
     static func komma(_ value: Double, stellen: Int = 2) -> String {
@@ -34,7 +41,6 @@ enum Gruende {
         case .protected(.edited): "Bearbeitet"
         case .protected(.inAlbum): "In einem Album"
         case .exactCopy: "Exakte Kopie"
-        case .probableCopy: "Wahrscheinlich eine Kopie"
         case .nearlyIdentical: "Fast gleich wie das behaltene Foto"
         case .lessSharp: "Unschärfer als das behaltene Foto"
         case .eyesClosed: "Augen geschlossen"

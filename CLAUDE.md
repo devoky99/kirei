@@ -39,6 +39,8 @@ Versprechen: einmal kaufen, alles auf dem Gerät, nichts sammeln, lieber ein Vor
 - Keine Fremdbibliotheken ohne Rückfrage. Keine nicht dokumentierten APIs ohne Hinweis auf das Prüfrisiko.
 - Datenschutz-Manifest (`App/Resources/PrivacyInfo.xcprivacy`) aktualisieren, sobald eine Schnittstelle mit Pflichtbegründung dazukommt.
 - Testbilder und Test-Mediathek nie ins Repo. Das Repo ist öffentlich.
+- Jedes Foto erscheint höchstens in einer Kategorie: exakte Duplikate und Serien zuerst, dann ähnlich, dann unscharf. Exakte Duplikate nur mit gleicher Prüfsumme lokaler Dateien.
+- Ab Phase 2: direkt vor dem Löschen die Schutzregeln frisch über PhotoKit prüfen, nicht aus dem Scan übernehmen.
 - Schwellen stehen nur in `SuggestionSettings` und ändern sich nur nach einem Prüfstand-Lauf (`kalibrieren`, `vorschlaege`, `auswerten`).
 - Ändert sich die Bildanalyse, steigt `VisionAnalyzer.version`. Dann rechnet der Index alles neu.
 - Begründungen kommen als `SuggestionReason` aus dem Kern. Die Texte dazu stehen in `App/Shared/SuggestionTexts.swift`, die deutschen Texte des Prüfstands in `Packages/Pruefstand/.../Hilfen.swift`.

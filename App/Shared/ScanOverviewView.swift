@@ -15,7 +15,7 @@ struct ScanOverviewView: View {
                     ScanProgressRow(progress: progress)
                 }
                 if library.results.counts.unavailable > 0 {
-                    Text("\(library.results.counts.unavailable) photos are only in iCloud and were skipped.")
+                    Text("\(library.results.counts.unavailable) photos were skipped, usually because they are only in iCloud.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

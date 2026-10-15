@@ -41,6 +41,9 @@ public struct PrecisionEstimate: Sendable, Equatable {
 ///
 /// Erwartet Werte, bei denen „kleiner oder gleich Schwelle“ einen Vorschlag
 /// auslöst, etwa Abstände zweier Fotos oder die Augenöffnung.
+///
+/// Nur eine Hilfe zum Einstellen. Ob Prüfpunkt 1 erreicht ist, zeigt erst die
+/// Prüfung echter Vorschläge mit `PrecisionEstimate`.
 public enum ThresholdCalibration {
     public struct Point: Sendable, Equatable {
         public let threshold: Double
@@ -56,41 +59,64 @@ public enum ThresholdCalibration {
         }
     }
 
+    public struct Recommendation: Sendable, Equatable {
+        public let point: Point
+        /// `false`: kein Fehler, aber zu wenige Beispiele für eine sichere Aussage.
+        public let isStatisticallySafe: Bool
+    }
+
+    /// Alle sinnvollen Schwellen mit Treffern und Fehlern. Läuft über sortierte
+    /// Listen, damit auch viele tausend Paare schnell gehen.
     public static func sweep(positives: [Double], negatives: [Double]) -> [Point] {
-        let candidates = Array(Set(positives + negatives)).sorted()
-        return candidates.map { threshold in
-            let truePositives = positives.filter { $0 <= threshold }.count
-            let falsePositives = negatives.filter { $0 <= threshold }.count
-            return Point(
+        let sortedPositives = positives.sorted()
+        let sortedNegatives = negatives.sorted()
+        let thresholds = Array(Set(positives + negatives)).sorted()
+
+        var points: [Point] = []
+        points.reserveCapacity(thresholds.count)
+        var positiveIndex = 0
+        var negativeIndex = 0
+        for threshold in thresholds {
+            while positiveIndex < sortedPositives.count && sortedPositives[positiveIndex] <= threshold {
+                positiveIndex += 1
+            }
+            while negativeIndex < sortedNegatives.count && sortedNegatives[negativeIndex] <= threshold {
+                negativeIndex += 1
+            }
+            points.append(Point(
                 threshold: threshold,
-                truePositives: truePositives,
-                falsePositives: falsePositives,
-                recall: positives.isEmpty ? 0 : Double(truePositives) / Double(positives.count)
-            )
+                truePositives: positiveIndex,
+                falsePositives: negativeIndex,
+                recall: positives.isEmpty ? 0 : Double(positiveIndex) / Double(positives.count)
+            ))
         }
+        return points
     }
 
     /// Größte Schwelle, deren Untergrenze das Ziel erreicht. Gibt es keine,
-    /// weil zu wenig markiert ist, die größte Schwelle ohne falschen Vorschlag.
+    /// oder fehlen Beispiele, die größte Schwelle ohne falschen Vorschlag.
     ///
     /// Nur Werte markierter Positive kommen als Schwelle in Frage: eine
     /// Schwelle genau auf einem Negativ bringt einen Fehler und keinen Treffer.
-    public static func recommend(positives: [Double], negatives: [Double], target: Double) -> Recommendation? {
+    /// Als sicher gilt eine Empfehlung erst mit genug Positiven und Negativen,
+    /// sonst fehlt der Gegenbeleg.
+    public static func recommend(
+        positives: [Double],
+        negatives: [Double],
+        target: Double,
+        minimumEach: Int = 100
+    ) -> Recommendation? {
         let positiveValues = Set(positives)
         let points = sweep(positives: positives, negatives: negatives)
             .filter { positiveValues.contains($0.threshold) }
-        if let safe = points.last(where: { $0.estimate.lowerBound >= target }) {
+        let enoughExamples = positives.count >= minimumEach && negatives.count >= minimumEach
+
+        if enoughExamples, let safe = points.last(where: { $0.estimate.lowerBound >= target }) {
             return Recommendation(point: safe, isStatisticallySafe: true)
         }
         if let clean = points.last(where: { $0.falsePositives == 0 }) {
             return Recommendation(point: clean, isStatisticallySafe: false)
         }
         return nil
-    }
-
-    public struct Recommendation: Sendable, Equatable {
-        public let point: Point
-        /// `false`: es gab keinen Fehler, aber zu wenige Markierungen für eine sichere Aussage.
-        public let isStatisticallySafe: Bool
     }
 }

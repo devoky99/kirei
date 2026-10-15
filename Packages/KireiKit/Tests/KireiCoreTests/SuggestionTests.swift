@@ -167,12 +167,19 @@ struct DuplicateFinderTests {
         #expect(DuplicateFinder.candidates(in: frames).isEmpty)
     }
 
+    @Test("Bearbeitete und unbearbeitete, Live Photo und Standbild sind keine Kandidaten")
+    func editsAndLivePhotosAreDistinct() {
+        let base = photo("a", at: 100)
+        let edited = AssetRecord(id: AssetID("b"), kind: .photo, creationDate: base.creationDate, pixelWidth: base.pixelWidth, pixelHeight: base.pixelHeight, hasAdjustments: true)
+        let live = AssetRecord(id: AssetID("c"), kind: .photo, traits: .livePhoto, creationDate: base.creationDate, pixelWidth: base.pixelWidth, pixelHeight: base.pixelHeight)
+        #expect(DuplicateFinder.candidates(in: [base, edited, live]).isEmpty)
+    }
+
     @Test("Gleiche Prüfsumme: exakte Kopie, vorausgewählt")
     func confirmedCopy() throws {
         let groups = DuplicateFinder.resolve(
             candidates: DuplicateFinder.candidates(in: records),
             hashes: [AssetID("a"): Data([1]), AssetID("b"): Data([1])],
-            prints: [:],
             settings: .default
         )
         let group = try #require(groups.first)
@@ -182,37 +189,24 @@ struct DuplicateFinderTests {
         #expect(group.suggested.allSatisfy { $0.isPreselected })
     }
 
-    @Test("Original nur in iCloud: wahrscheinliche Kopie, nicht vorausgewählt")
-    func probableCopy() throws {
+    @Test("Ohne Prüfsumme, etwa weil das Original nur in iCloud liegt, keine Duplikat-Gruppe")
+    func unconfirmedIsNoDuplicate() {
         let groups = DuplicateFinder.resolve(
             candidates: DuplicateFinder.candidates(in: records),
             hashes: [AssetID("a"): Data([1])],
-            prints: [AssetID("a"): testPrint(axis: 0), AssetID("b"): testPrint(axis: 0)],
             settings: .default
         )
-        let group = try #require(groups.first)
-        #expect(group.items[0].assetID == AssetID("a"))
-        #expect(group.suggested.map(\.reasons) == [[.probableCopy]])
-        #expect(group.suggested.allSatisfy { !$0.isPreselected })
+        #expect(groups.isEmpty)
     }
 
-    @Test("Verschiedene Prüfsummen oder verschiedene Bilder sind keine Kopien")
-    func notCopies() {
-        let candidates = DuplicateFinder.candidates(in: records)
-        let differentHashes = DuplicateFinder.resolve(
-            candidates: candidates,
+    @Test("Verschiedene Prüfsummen sind keine Kopien")
+    func differentHashes() {
+        let groups = DuplicateFinder.resolve(
+            candidates: DuplicateFinder.candidates(in: records),
             hashes: [AssetID("a"): Data([1]), AssetID("b"): Data([2])],
-            prints: [AssetID("a"): testPrint(axis: 0), AssetID("b"): testPrint(axis: 0)],
             settings: .default
         )
-        let differentImages = DuplicateFinder.resolve(
-            candidates: candidates,
-            hashes: [:],
-            prints: [AssetID("a"): testPrint(axis: 0), AssetID("b"): testPrint(axis: 2)],
-            settings: .default
-        )
-        #expect(differentHashes.isEmpty)
-        #expect(differentImages.isEmpty)
+        #expect(groups.isEmpty)
     }
 
     @Test("Ein geschützter Eintrag wird behalten, nie vorgeschlagen")
@@ -221,7 +215,6 @@ struct DuplicateFinderTests {
         let groups = DuplicateFinder.resolve(
             candidates: DuplicateFinder.candidates(in: favorite),
             hashes: [AssetID("a"): Data([1]), AssetID("b"): Data([1])],
-            prints: [:],
             settings: .default
         )
         let group = try #require(groups.first)
@@ -361,6 +354,21 @@ struct QualityTests {
         ))
         #expect(recommendation.point.threshold == 0.2)
         #expect(!recommendation.isStatisticallySafe)
+    }
+
+    @Test("Ohne Gegenbeispiele gibt es keine abgesicherte Empfehlung")
+    func noNegatives() throws {
+        let positives = (0..<400).map { 0.05 + Double($0) / 2_000 }
+        let recommendation = try #require(ThresholdCalibration.recommend(positives: positives, negatives: [], target: 0.98))
+        #expect(!recommendation.isStatisticallySafe)
+    }
+
+    @Test("Auswertung zählt Treffer und Fehler je Schwelle")
+    func sweepCounts() {
+        let points = ThresholdCalibration.sweep(positives: [0.1, 0.3, 0.3], negatives: [0.2, 0.5])
+        #expect(points.map(\.threshold) == [0.1, 0.2, 0.3, 0.5])
+        #expect(points.map(\.truePositives) == [1, 1, 3, 3])
+        #expect(points.map(\.falsePositives) == [0, 1, 1, 2])
     }
 
     @Test("Viele Markierungen: abgesicherte Empfehlung")

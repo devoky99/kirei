@@ -51,7 +51,7 @@
         }
       }
     },
-    "%lld photos are only in iCloud and were skipped.": {
+    "%lld photos were skipped, usually because they are only in iCloud.": {
       "localizations": {
         "en": {
           "variations": {
@@ -59,13 +59,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld photo is only in iCloud and was skipped."
+                  "value": "%lld photo was skipped, usually because it is only in iCloud."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld photos are only in iCloud and were skipped."
+                  "value": "%lld photos were skipped, usually because they are only in iCloud."
                 }
               }
             }
@@ -77,13 +77,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld Foto liegt nur in iCloud und wurde übersprungen."
+                  "value": "%lld Foto wurde übersprungen, meist weil es nur in iCloud liegt."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld Fotos liegen nur in iCloud und wurden übersprungen."
+                  "value": "%lld Fotos wurden übersprungen, meist weil sie nur in iCloud liegen."
                 }
               }
             }
@@ -517,16 +517,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vorausgewählt"
-          }
-        }
-      }
-    },
-    "Probably a copy (original in iCloud)": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wahrscheinlich eine Kopie (Original in iCloud)"
           }
         }
       }

@@ -14,7 +14,7 @@ public struct ScanState: Sendable, Codable, Equatable {
 /// Speichert den Scan-Stand als kleine JSON-Datei im App-Container.
 ///
 /// Absichtlich keine UserDefaults und keine Datei-Zeitstempel, damit das
-/// Datenschutz-Manifest klein bleibt. Ab Phase 1 übernimmt SwiftData.
+/// Datenschutz-Manifest klein bleibt. Die Analysen selbst liegen im Index.
 public struct ScanStateStore: Sendable {
     public let fileURL: URL
 
@@ -22,17 +22,9 @@ public struct ScanStateStore: Sendable {
         self.fileURL = directory.appending(path: "scan-state.json")
     }
 
-    /// Ablage unter „Application Support/Kirei“, auf dem Mac im Sandbox-Container.
+    /// Ablage in Kireis eigenem Ordner, ohne Backup.
     public static func standard() throws -> ScanStateStore {
-        let base = try FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let directory = base.appending(path: "Kirei", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return ScanStateStore(directory: directory)
+        ScanStateStore(directory: try KireiStorage.directory())
     }
 
     public func load() -> ScanState? {
