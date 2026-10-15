@@ -44,7 +44,13 @@ public struct PhotoKitSource: PhotoSource, LibraryChangeTracker {
     // MARK: Einträge
 
     public func fetchRecords() async throws -> [AssetRecord] {
-        let albumMembers = Self.userAlbumAssetIDs()
+        let albumMembers = Self.assetIDs(in: PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .albumRegular, options: nil
+        ))
+        // Bildschirmaufnahmen kennt PhotoKit nur als intelligentes Album (ab iOS 18, macOS 15).
+        let screenRecordings = Self.assetIDs(in: PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum, subtype: .smartAlbumScreenRecordings, options: nil
+        ))
 
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
@@ -58,15 +64,18 @@ public struct PhotoKitSource: PhotoSource, LibraryChangeTracker {
         var records: [AssetRecord] = []
         records.reserveCapacity(result.count)
         result.enumerateObjects { asset, _, _ in
-            records.append(Self.record(from: asset, inUserAlbum: albumMembers.contains(asset.localIdentifier)))
+            records.append(Self.record(
+                from: asset,
+                inUserAlbum: albumMembers.contains(asset.localIdentifier),
+                isScreenRecording: screenRecordings.contains(asset.localIdentifier)
+            ))
         }
         return records
     }
 
-    /// Alle Fotos, die in mindestens einem eigenen Album liegen. Schutzregel.
-    static func userAlbumAssetIDs() -> Set<String> {
+    /// Alle Einträge in diesen Alben, etwa für die Schutzregel „in einem eigenen Album“.
+    static func assetIDs(in albums: PHFetchResult<PHAssetCollection>) -> Set<String> {
         var ids = Set<String>()
-        let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: nil)
         albums.enumerateObjects { album, _, _ in
             let assets = PHAsset.fetchAssets(in: album, options: nil)
             assets.enumerateObjects { asset, _, _ in
@@ -76,12 +85,12 @@ public struct PhotoKitSource: PhotoSource, LibraryChangeTracker {
         return ids
     }
 
-    static func record(from asset: PHAsset, inUserAlbum: Bool) -> AssetRecord {
+    static func record(from asset: PHAsset, inUserAlbum: Bool, isScreenRecording: Bool) -> AssetRecord {
         var traits: AssetTraits = []
         let subtypes = asset.mediaSubtypes
         if subtypes.contains(.photoScreenshot) { traits.insert(.screenshot) }
         if subtypes.contains(.photoLive) { traits.insert(.livePhoto) }
-        if subtypes.contains(.videoScreenRecording) { traits.insert(.screenRecording) }
+        if isScreenRecording { traits.insert(.screenRecording) }
         if asset.burstIdentifier != nil { traits.insert(.burst) }
         if asset.representsBurst { traits.insert(.burstRepresentative) }
         let selection = asset.burstSelectionTypes
