@@ -127,9 +127,21 @@ public actor LibraryScanner {
         clusters += grouper.finish()
 
         // 4. Gesichter und bestes Foto
-        let clusteredIDs = clusters.flatMap { $0.members.map(\.id) }
-        try await analyzeFaces(clusteredIDs, version: version, onUpdate: onUpdate)
-        let faces = try await index.faces(for: clusteredIDs, version: version)
+        // Gesichter kommen schon beim Lesen mit; nur fehlende werden berechnet.
+        let clusteredMembers = clusters.flatMap(\.members)
+        let clusteredIDs = clusteredMembers.map(\.id)
+        let missingFaces = clusteredMembers.filter { $0.photo.faces == nil }.map(\.id)
+        try await analyzeFaces(missingFaces, version: version, onUpdate: onUpdate)
+        var faces: [AssetID: FaceSummary] = [:]
+        for member in clusteredMembers {
+            if let known = member.photo.faces {
+                faces[member.id] = known
+            }
+        }
+        if !missingFaces.isEmpty {
+            let fresh = try await index.faces(for: missingFaces, version: version)
+            faces.merge(fresh) { known, _ in known }
+        }
 
         let similarGroups = clusters.compactMap { cluster -> SuggestionGroup? in
             let members = cluster.members.compactMap { candidate -> GroupMember? in
@@ -248,7 +260,7 @@ public actor LibraryScanner {
         version: Int,
         onUpdate: @escaping @Sendable (ScanUpdate) async -> Void
     ) async throws {
-        let pending = try await index.pendingFaces(among: ids, version: version)
+        let pending = ids
         guard !pending.isEmpty else { return }
 
         var done = 0

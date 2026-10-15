@@ -98,110 +98,120 @@ public actor AssetIndex {
     /// Speichert in Paketen, damit auch 100.000 neue Einträge wenig Speicher brauchen.
     @discardableResult
     public func sync(_ records: [AssetRecord]) throws -> IndexSyncResult {
-        var descriptor = FetchDescriptor<IndexedAsset>()
-        descriptor.propertiesToFetch = [\.assetID, \.sortDate, \.modificationDate, \.isAnalyzable]
-        let existing = try modelContext.fetch(descriptor)
-        var byID: [String: IndexedAsset] = [:]
-        byID.reserveCapacity(existing.count)
-        for entry in existing {
-            byID[entry.assetID] = entry
-        }
+        return try withContext { context in
+            var descriptor = FetchDescriptor<IndexedAsset>()
+            descriptor.propertiesToFetch = [\.assetID, \.sortDate, \.modificationDate, \.isAnalyzable]
+            let existing = try context.fetch(descriptor)
+            var byID: [String: IndexedAsset] = [:]
+            byID.reserveCapacity(existing.count)
+            for entry in existing {
+                byID[entry.assetID] = entry
+            }
 
-        var seen = Set<String>()
-        var result = IndexSyncResult(inserted: 0, updated: 0, removed: 0)
-        var pending = 0
-        for record in records {
-            let key = record.id.rawValue
-            guard seen.insert(key).inserted else { continue }
-            if let entry = byID[key] {
-                let dateChanged = entry.sortDate != (record.creationDate ?? .distantPast)
-                if entry.modificationDate != record.modificationDate
-                    || entry.isAnalyzable != record.isAnalyzable
-                    || dateChanged {
-                    entry.reset(with: record)
-                    result.updated += 1
+            var seen = Set<String>()
+            var result = IndexSyncResult(inserted: 0, updated: 0, removed: 0)
+            var pending = 0
+            for record in records {
+                let key = record.id.rawValue
+                guard seen.insert(key).inserted else { continue }
+                if let entry = byID[key] {
+                    let dateChanged = entry.sortDate != (record.creationDate ?? .distantPast)
+                    if entry.modificationDate != record.modificationDate
+                        || entry.isAnalyzable != record.isAnalyzable
+                        || dateChanged {
+                        entry.reset(with: record)
+                        result.updated += 1
+                        pending += 1
+                    }
+                } else {
+                    context.insert(IndexedAsset(record: record))
+                    result.inserted += 1
                     pending += 1
                 }
-            } else {
-                modelContext.insert(IndexedAsset(record: record))
-                result.inserted += 1
-                pending += 1
+                if pending >= Self.saveChunk {
+                    try context.save()
+                    pending = 0
+                }
             }
-            if pending >= Self.saveChunk {
-                try modelContext.save()
-                pending = 0
+
+            for entry in existing where !seen.contains(entry.assetID) {
+                context.delete(entry)
+                result.removed += 1
             }
-        }
 
-        for entry in existing where !seen.contains(entry.assetID) {
-            modelContext.delete(entry)
-            result.removed += 1
+            try context.save()
+            return result
         }
-
-        try modelContext.save()
-        return result
     }
 
     /// Fotos ohne lokales Vorschaubild beim nächsten Durchlauf erneut versuchen.
     /// Etwa wenn iCloud inzwischen ein Vorschaubild geladen hat.
     public func retryUnavailable() throws {
-        let descriptor = FetchDescriptor<IndexedAsset>(
-            predicate: #Predicate<IndexedAsset> { $0.analysisUnavailable == true }
-        )
-        for entry in try modelContext.fetch(descriptor) {
-            entry.analysisVersion = 0
-            entry.analysisUnavailable = false
+        try withContext { context in
+            let descriptor = FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> { $0.analysisUnavailable == true }
+            )
+            for entry in try context.fetch(descriptor) {
+                entry.analysisVersion = 0
+                entry.analysisUnavailable = false
+            }
+            try context.save()
         }
-        try modelContext.save()
     }
 
     // MARK: Bildanalyse
 
     /// Fotos ohne aktuelle Analyse, neueste zuerst.
     public func pendingAnalysis(version: Int, limit: Int) throws -> [AssetID] {
-        var descriptor = FetchDescriptor<IndexedAsset>(
-            predicate: #Predicate<IndexedAsset> { $0.isAnalyzable == true && $0.analysisVersion < version },
-            sortBy: [SortDescriptor(\.sortDate, order: .reverse)]
-        )
-        descriptor.fetchLimit = limit
-        return try modelContext.fetch(descriptor).map { AssetID($0.assetID) }
+        return try withContext { context in
+            var descriptor = FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> { $0.isAnalyzable == true && $0.analysisVersion < version },
+                sortBy: [SortDescriptor(\.sortDate, order: .reverse)]
+            )
+            descriptor.fetchLimit = limit
+            return try context.fetch(descriptor).map { AssetID($0.assetID) }
+        }
     }
 
     public func save(analyses outcomes: [AnalysisOutcome], version: Int) throws {
-        let entries = try entries(for: outcomes.map(\.id))
-        for outcome in outcomes {
-            guard let entry = entries[outcome.id.rawValue] else { continue }
-            entry.analysisVersion = version
-            if let analysis = outcome.analysis {
-                entry.analysisUnavailable = false
-                entry.featurePrintData = analysis.featurePrint?.data
-                entry.aestheticScore = analysis.aestheticScore.map(Double.init)
-                entry.isUtility = analysis.isUtility
-                entry.sharpness = analysis.sharpness
-            } else {
-                entry.analysisUnavailable = true
-                entry.featurePrintData = nil
-                entry.aestheticScore = nil
-                entry.isUtility = false
-                entry.sharpness = 0
+        try withContext { context in
+            let entries = try entries(for: outcomes.map(\.id), in: context)
+            for outcome in outcomes {
+                guard let entry = entries[outcome.id.rawValue] else { continue }
+                entry.analysisVersion = version
+                if let analysis = outcome.analysis {
+                    entry.analysisUnavailable = false
+                    entry.featurePrintData = analysis.featurePrint?.data
+                    entry.aestheticScore = analysis.aestheticScore.map(Double.init)
+                    entry.isUtility = analysis.isUtility
+                    entry.sharpness = analysis.sharpness
+                } else {
+                    entry.analysisUnavailable = true
+                    entry.featurePrintData = nil
+                    entry.aestheticScore = nil
+                    entry.isUtility = false
+                    entry.sharpness = 0
+                }
             }
+            try context.save()
         }
-        try modelContext.save()
     }
 
     public func analysisCounts(version: Int) throws -> AnalysisCounts {
-        let analyzable = try modelContext.fetchCount(FetchDescriptor<IndexedAsset>(
-            predicate: #Predicate<IndexedAsset> { $0.isAnalyzable == true }
-        ))
-        let processed = try modelContext.fetchCount(FetchDescriptor<IndexedAsset>(
-            predicate: #Predicate<IndexedAsset> { $0.isAnalyzable == true && $0.analysisVersion >= version }
-        ))
-        let unavailable = try modelContext.fetchCount(FetchDescriptor<IndexedAsset>(
-            predicate: #Predicate<IndexedAsset> {
-                $0.isAnalyzable == true && $0.analysisVersion >= version && $0.analysisUnavailable == true
-            }
-        ))
-        return AnalysisCounts(analyzable: analyzable, processed: processed, unavailable: unavailable)
+        return try withContext { context in
+            let analyzable = try context.fetchCount(FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> { $0.isAnalyzable == true }
+            ))
+            let processed = try context.fetchCount(FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> { $0.isAnalyzable == true && $0.analysisVersion >= version }
+            ))
+            let unavailable = try context.fetchCount(FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> {
+                    $0.isAnalyzable == true && $0.analysisVersion >= version && $0.analysisUnavailable == true
+                }
+            ))
+            return AnalysisCounts(analyzable: analyzable, processed: processed, unavailable: unavailable)
+        }
     }
 
     /// Analysierte Fotos, älteste zuerst, seitenweise.
@@ -209,100 +219,125 @@ public actor AssetIndex {
     /// Liest ab dem letzten Eintrag der vorigen Seite weiter statt mit wachsendem
     /// Versatz. So bleibt jede Seite gleich schnell, auch bei 100.000 Fotos.
     public func analyzedPhotos(version: Int, after cursor: IndexCursor?, limit: Int) throws -> [AnalyzedPhoto] {
-        var descriptor: FetchDescriptor<IndexedAsset>
-        if let cursor {
-            let date = cursor.sortDate
-            let id = cursor.assetID
-            descriptor = FetchDescriptor<IndexedAsset>(
-                predicate: #Predicate<IndexedAsset> {
-                    $0.isAnalyzable == true
-                        && $0.analysisVersion >= version
-                        && $0.analysisUnavailable == false
-                        && ($0.sortDate > date || ($0.sortDate == date && $0.assetID > id))
-                },
-                sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
-            )
-        } else {
-            descriptor = FetchDescriptor<IndexedAsset>(
-                predicate: #Predicate<IndexedAsset> {
-                    $0.isAnalyzable == true
-                        && $0.analysisVersion >= version
-                        && $0.analysisUnavailable == false
-                },
-                sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
-            )
+        return try withContext { context in
+            var descriptor: FetchDescriptor<IndexedAsset>
+            if let cursor {
+                let date = cursor.sortDate
+                let id = cursor.assetID
+                descriptor = FetchDescriptor<IndexedAsset>(
+                    predicate: #Predicate<IndexedAsset> {
+                        $0.isAnalyzable == true
+                            && $0.analysisVersion >= version
+                            && $0.analysisUnavailable == false
+                            && ($0.sortDate > date || ($0.sortDate == date && $0.assetID > id))
+                    },
+                    sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
+                )
+            } else {
+                descriptor = FetchDescriptor<IndexedAsset>(
+                    predicate: #Predicate<IndexedAsset> {
+                        $0.isAnalyzable == true
+                            && $0.analysisVersion >= version
+                            && $0.analysisUnavailable == false
+                    },
+                    sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
+                )
+            }
+            descriptor.fetchLimit = limit
+            return try context.fetch(descriptor).map { $0.analyzedPhoto(faceVersion: version) }
         }
-        descriptor.fetchLimit = limit
-        return try modelContext.fetch(descriptor).map(\.analyzedPhoto)
     }
 
     public func featurePrints(for ids: [AssetID]) throws -> [AssetID: FeaturePrint] {
-        var result: [AssetID: FeaturePrint] = [:]
-        for (key, entry) in try entries(for: ids) {
-            if let data = entry.featurePrintData, let print = FeaturePrint(data: data) {
-                result[AssetID(key)] = print
+        return try withContext { context in
+            var result: [AssetID: FeaturePrint] = [:]
+            for (key, entry) in try entries(for: ids, in: context) {
+                if let data = entry.featurePrintData, let print = FeaturePrint(data: data) {
+                    result[AssetID(key)] = print
+                }
             }
+            return result
         }
-        return result
     }
 
     // MARK: Gesichter
 
     public func pendingFaces(among ids: [AssetID], version: Int) throws -> [AssetID] {
-        try entries(for: ids).values
-            .filter { $0.faceVersion < version }
-            .map { AssetID($0.assetID) }
-            .sorted()
+        return try withContext { context in
+            try entries(for: ids, in: context).values
+                .filter { $0.faceVersion < version }
+                .map { AssetID($0.assetID) }
+                .sorted()
+        }
     }
 
     public func save(faces outcomes: [FaceOutcome], version: Int) throws {
-        let entries = try entries(for: outcomes.map(\.id))
-        for outcome in outcomes {
-            // Ohne Vorschaubild bleibt der Eintrag offen und wird beim nächsten Scan versucht.
-            guard let entry = entries[outcome.id.rawValue], let faces = outcome.faces else { continue }
-            entry.faceVersion = version
-            entry.faceCount = faces.faceCount
-            entry.minEyeOpenness = faces.minEyeOpenness
-            entry.faceQuality = faces.meanCaptureQuality
+        try withContext { context in
+            let entries = try entries(for: outcomes.map(\.id), in: context)
+            for outcome in outcomes {
+                // Ohne Vorschaubild bleibt der Eintrag offen und wird beim nächsten Scan versucht.
+                guard let entry = entries[outcome.id.rawValue], let faces = outcome.faces else { continue }
+                entry.faceVersion = version
+                entry.faceCount = faces.faceCount
+                entry.minEyeOpenness = faces.minEyeOpenness
+                entry.faceQuality = faces.meanCaptureQuality
+            }
+            try context.save()
         }
-        try modelContext.save()
     }
 
     public func faces(for ids: [AssetID], version: Int) throws -> [AssetID: FaceSummary] {
-        var result: [AssetID: FaceSummary] = [:]
-        for (key, entry) in try entries(for: ids) where entry.faceVersion >= version {
-            result[AssetID(key)] = FaceSummary(
-                faceCount: entry.faceCount,
-                minEyeOpenness: entry.minEyeOpenness,
-                meanCaptureQuality: entry.faceQuality
-            )
+        return try withContext { context in
+            var result: [AssetID: FaceSummary] = [:]
+            for (key, entry) in try entries(for: ids, in: context) where entry.faceVersion >= version {
+                result[AssetID(key)] = FaceSummary(
+                    faceCount: entry.faceCount,
+                    minEyeOpenness: entry.minEyeOpenness,
+                    meanCaptureQuality: entry.faceQuality
+                )
+            }
+            return result
         }
-        return result
     }
 
     // MARK: Prüfsummen
 
     public func contentHashes(for ids: [AssetID]) throws -> [AssetID: Data] {
-        var result: [AssetID: Data] = [:]
-        for (key, entry) in try entries(for: ids) {
-            if let hash = entry.contentHash {
-                result[AssetID(key)] = hash
+        return try withContext { context in
+            var result: [AssetID: Data] = [:]
+            for (key, entry) in try entries(for: ids, in: context) {
+                if let hash = entry.contentHash {
+                    result[AssetID(key)] = hash
+                }
             }
+            return result
         }
-        return result
     }
 
     public func save(contentHashes: [AssetID: Data]) throws {
-        let entries = try entries(for: Array(contentHashes.keys))
-        for (id, hash) in contentHashes {
-            entries[id.rawValue]?.contentHash = hash
+        try withContext { context in
+            let entries = try entries(for: Array(contentHashes.keys), in: context)
+            for (id, hash) in contentHashes {
+                entries[id.rawValue]?.contentHash = hash
+            }
+            try context.save()
         }
-        try modelContext.save()
     }
 
     // MARK: Hilfen
 
-    private func entries(for ids: [AssetID]) throws -> [String: IndexedAsset] {
+    /// Ein frischer Kontext pro Arbeitsschritt. So hält der Index keine
+    /// gelesenen Einträge über den Schritt hinaus fest und der Speicher wächst
+    /// nicht von Scan zu Scan.
+    private func withContext<Result>(_ body: (ModelContext) throws -> Result) rethrows -> Result {
+        try autoreleasepool {
+            let context = ModelContext(modelContainer)
+            context.autosaveEnabled = false
+            return try body(context)
+        }
+    }
+
+    private func entries(for ids: [AssetID], in context: ModelContext) throws -> [String: IndexedAsset] {
         var result: [String: IndexedAsset] = [:]
         let keys = ids.map(\.rawValue)
         for start in stride(from: 0, to: keys.count, by: Self.lookupChunk) {
@@ -310,7 +345,7 @@ public actor AssetIndex {
             let descriptor = FetchDescriptor<IndexedAsset>(
                 predicate: #Predicate<IndexedAsset> { chunk.contains($0.assetID) }
             )
-            for entry in try modelContext.fetch(descriptor) {
+            for entry in try context.fetch(descriptor) {
                 result[entry.assetID] = entry
             }
         }
