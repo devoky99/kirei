@@ -43,19 +43,29 @@ public struct ScanMetrics: Sendable, Equatable {
     public var totalSeconds: Double
     /// Höchster Speicherbedarf des Prozesses bisher. Ziel: unter 300 MB.
     public var peakMemoryBytes: Int64
+    /// Einzelne Schritte, um Engpässe zu finden.
+    public var readingSeconds: Double
+    public var syncSeconds: Double
+    public var comparingSeconds: Double
 
     public init(
         firstResultsSeconds: Double,
         analysisSeconds: Double,
         analyzedInThisRun: Int,
         totalSeconds: Double,
-        peakMemoryBytes: Int64
+        peakMemoryBytes: Int64,
+        readingSeconds: Double = 0,
+        syncSeconds: Double = 0,
+        comparingSeconds: Double = 0
     ) {
         self.firstResultsSeconds = firstResultsSeconds
         self.analysisSeconds = analysisSeconds
         self.analyzedInThisRun = analyzedInThisRun
         self.totalSeconds = totalSeconds
         self.peakMemoryBytes = peakMemoryBytes
+        self.readingSeconds = readingSeconds
+        self.syncSeconds = syncSeconds
+        self.comparingSeconds = comparingSeconds
     }
 
     /// Analysezeit hochgerechnet auf eine Anzahl Fotos, `nil` ohne Analyse.

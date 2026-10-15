@@ -38,9 +38,11 @@ enum Last {
                 }
             }
 
-            let started = Date()
             let second = try await scanner.scan { _ in }
-            print("Zweiter Scan ohne Änderungen: \(Zahl.komma(Date().timeIntervalSince(started), stellen: 1)) s, neu analysiert: \(second.metrics?.analyzedInThisRun ?? 0)")
+            print("Zweiter Scan ohne Änderungen:")
+            if let metrics = second.metrics {
+                Messwerte.drucken(metrics)
+            }
             return 0
         } catch {
             print("Lasttest fehlgeschlagen: \(error.localizedDescription)")
@@ -54,7 +56,7 @@ enum Messwerte {
     static func drucken(_ metrics: ScanMetrics) {
         print("  Erste Ergebnisse nach \(Zahl.komma(metrics.firstResultsSeconds, stellen: 1)) s (Ziel unter 10 s)")
         print("  Analyse: \(Zahl.ganz(metrics.analyzedInThisRun)) Fotos in \(Zahl.komma(metrics.analysisSeconds, stellen: 1)) s")
-        print("  Scan gesamt: \(Zahl.komma(metrics.totalSeconds, stellen: 1)) s")
+        print("  Scan gesamt: \(Zahl.komma(metrics.totalSeconds, stellen: 1)) s (Lesen \(Zahl.komma(metrics.readingSeconds, stellen: 1)), Index-Abgleich \(Zahl.komma(metrics.syncSeconds, stellen: 1)), Analyse \(Zahl.komma(metrics.analysisSeconds, stellen: 1)), Vergleichen \(Zahl.komma(metrics.comparingSeconds, stellen: 1)))")
         print("  Spitzen-Speicher: \(Zahl.ganz(Int(metrics.peakMemoryBytes / 1_000_000))) MB (Ziel unter 300 MB)")
     }
 }

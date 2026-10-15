@@ -58,6 +58,7 @@ public actor LibraryScanner {
         // 1. Metadaten
         await onUpdate(.progress(ScanProgress(stage: .reading)))
         let records = try await source.fetchRecords()
+        let readingSeconds = Date().timeIntervalSince(started)
         await onUpdate(.records(records))
         let recordsByID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -73,8 +74,10 @@ public actor LibraryScanner {
         )))
         let firstResults = Date().timeIntervalSince(started)
 
+        let syncStarted = Date()
         try await index.sync(records)
         try await index.retryUnavailable()
+        let syncSeconds = Date().timeIntervalSince(syncStarted)
 
         // 2. Bildanalyse in Etappen
         let analysisStarted = Date()
@@ -83,6 +86,7 @@ public actor LibraryScanner {
         counts = try await index.analysisCounts(version: version)
 
         // 3. Duplikate und ähnliche Fotos
+        let comparingStarted = Date()
         await onUpdate(.progress(ScanProgress(stage: .comparing)))
         let candidates = DuplicateFinder.candidates(in: records)
         let candidateIDs = candidates.flatMap { $0.map(\.id) }
@@ -157,7 +161,10 @@ public actor LibraryScanner {
                 analysisSeconds: analysisSeconds,
                 analyzedInThisRun: analyzedInThisRun,
                 totalSeconds: Date().timeIntervalSince(started),
-                peakMemoryBytes: MemoryUsage.peakResidentBytes()
+                peakMemoryBytes: MemoryUsage.peakResidentBytes(),
+                readingSeconds: readingSeconds,
+                syncSeconds: syncSeconds,
+                comparingSeconds: Date().timeIntervalSince(comparingStarted)
             )
         )
         await onUpdate(.progress(ScanProgress(stage: .finished)))
