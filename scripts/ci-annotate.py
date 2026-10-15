@@ -98,7 +98,7 @@ def annotate(log_path: str) -> None:
 def notice(title: str, log_path: str) -> None:
     with open(log_path, encoding="utf-8", errors="replace") as handle:
         lines = handle.read().splitlines()
-    print(f"::notice title={escape_property(title)}::{escape(chr(10).join(lines[-60:]))}")
+    print(f"::notice title={escape_property(title)}::{escape(chr(10).join(lines[-120:]))}")
 
 
 def main() -> int:
