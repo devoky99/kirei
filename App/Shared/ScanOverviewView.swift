@@ -101,6 +101,8 @@ private struct ScanProgressRow: View {
             Text("Comparing similar photos…")
         case .faces:
             Text("Checking faces: \(progress.completed) of \(progress.total)")
+        case .paused:
+            Text("Paused while your device cools down.")
         case .finished:
             EmptyView()
         }

@@ -17,19 +17,30 @@ enum AnalysisThrottle {
         if processInfo.isLowPowerModeEnabled {
             return 1
         }
+        return fullParallelism
+    }
+
+    /// Ohne Rücksicht auf den Gerätezustand, etwa im Prüfstand.
+    static var fullParallelism: Int {
         #if os(macOS)
-        return 4
+        4
         #else
-        return 2
+        2
         #endif
     }
 
     /// Wartet, bis wieder gerechnet werden darf, und sagt, wie viel parallel geht.
-    static func waitForCapacity() async throws -> Int {
+    /// Meldet eine Pause einmal über `onPause`.
+    static func waitForCapacity(onPause: () async -> Void) async throws -> Int {
+        var announced = false
         while true {
             let parallelism = currentParallelism()
             if parallelism > 0 {
                 return parallelism
+            }
+            if !announced {
+                announced = true
+                await onPause()
             }
             try await Task.sleep(for: .seconds(10))
         }

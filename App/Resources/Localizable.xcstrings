@@ -491,6 +491,16 @@
         }
       }
     },
+    "Paused while your device cools down.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausiert, bis das Gerät abgekühlt ist."
+          }
+        }
+      }
+    },
     "Photo access is off": {
       "localizations": {
         "de": {

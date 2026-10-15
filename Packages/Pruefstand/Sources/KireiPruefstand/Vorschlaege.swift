@@ -15,6 +15,7 @@ struct Pruefzeile: Codable {
 enum Vorschlaege {
     static func run(folder: URL) async -> Int32 {
         let source = FolderPhotoSource(folder: folder)
+        print("Index wird angelegt …")
         let index: AssetIndex
         do {
             index = try AssetIndex.inMemory()
@@ -23,11 +24,13 @@ enum Vorschlaege {
             return 1
         }
 
+        // Ohne Drosselung: der Prüfstand misst den Kern, nicht die Temperatur des Macs.
         let scanner = LibraryScanner(
             source: source,
             analyzer: VisionAnalyzer(),
             hasher: FileContentHasher(source: source),
-            index: index
+            index: index,
+            adaptsToDeviceState: false
         )
         let printer = ProgressPrinter()
         let results: ScanResults
@@ -138,6 +141,7 @@ actor ProgressPrinter {
             case .analyzing: print("Fotos werden analysiert …")
             case .comparing: print("Fotos werden verglichen …")
             case .faces: print("Gesichter werden geprüft …")
+            case .paused: print("Pausiert, das Gerät meldet kritische Temperatur.")
             case .finished: print("Fertig.")
             }
         }

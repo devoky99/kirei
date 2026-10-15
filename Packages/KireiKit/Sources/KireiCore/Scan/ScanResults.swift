@@ -11,6 +11,8 @@ public struct ScanProgress: Sendable, Equatable {
         case comparing
         /// Gesichter in Gruppen prüfen.
         case faces
+        /// Pause, bis das Gerät abgekühlt ist.
+        case paused
         case finished
     }
 

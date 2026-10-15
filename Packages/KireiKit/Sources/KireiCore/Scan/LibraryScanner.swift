@@ -17,6 +17,7 @@ public actor LibraryScanner {
     private let hasher: (any ContentHasher)?
     private let index: AssetIndex
     private let settings: SuggestionSettings
+    private let adaptsToDeviceState: Bool
     private let now: @Sendable () -> Date
 
     /// Fotos pro Paket. Klein genug für häufige Fortschrittsmeldungen.
@@ -30,6 +31,7 @@ public actor LibraryScanner {
         hasher: (any ContentHasher)?,
         index: AssetIndex,
         settings: SuggestionSettings = .default,
+        adaptsToDeviceState: Bool = true,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.source = source
@@ -37,6 +39,7 @@ public actor LibraryScanner {
         self.hasher = hasher
         self.index = index
         self.settings = settings
+        self.adaptsToDeviceState = adaptsToDeviceState
         self.now = now
     }
 
@@ -161,10 +164,18 @@ public actor LibraryScanner {
             if ids.isEmpty { break }
 
             await onUpdate(.progress(ScanProgress(stage: .analyzing, completed: counts.processed, total: counts.analyzable)))
-            let parallelism = try await AnalysisThrottle.waitForCapacity()
+            let parallelism = try await capacity(onUpdate: onUpdate)
             let outcomes = await Self.analyzeBatch(ids, source: source, analyzer: analyzer, parallelism: parallelism)
             try await index.save(analyses: outcomes, version: version)
             counts.processed += outcomes.count
+        }
+    }
+
+    /// Wie viel parallel gerechnet wird. Bei kritischer Temperatur wird pausiert.
+    private func capacity(onUpdate: @escaping @Sendable (ScanUpdate) async -> Void) async throws -> Int {
+        guard adaptsToDeviceState else { return AnalysisThrottle.fullParallelism }
+        return try await AnalysisThrottle.waitForCapacity {
+            await onUpdate(.progress(ScanProgress(stage: .paused)))
         }
     }
 
@@ -222,7 +233,7 @@ public actor LibraryScanner {
         for chunk in pending.chunks(of: Self.batchSize) {
             try Task.checkCancellation()
             await onUpdate(.progress(ScanProgress(stage: .faces, completed: done, total: pending.count)))
-            let parallelism = try await AnalysisThrottle.waitForCapacity()
+            let parallelism = try await capacity(onUpdate: onUpdate)
             let outcomes = await Self.faceBatch(Array(chunk), source: source, analyzer: analyzer, parallelism: parallelism)
             try await index.save(faces: outcomes, version: version)
             done += chunk.count

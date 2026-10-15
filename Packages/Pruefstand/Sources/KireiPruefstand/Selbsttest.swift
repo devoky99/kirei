@@ -5,6 +5,15 @@ import KireiCore
 enum Selbsttest {
     static func run() async -> Int32 {
         print("Vision-Selbsttest")
+        let info = ProcessInfo.processInfo
+        let thermal = switch info.thermalState {
+        case .nominal: "normal"
+        case .fair: "leicht erhöht"
+        case .serious: "hoch"
+        case .critical: "kritisch"
+        @unknown default: "unbekannt"
+        }
+        print("Temperatur:        \(thermal), Stromsparmodus \(info.isLowPowerModeEnabled ? "an" : "aus")")
         guard let checker = Testbilder.schachbrett(), let gradient = Testbilder.verlauf() else {
             print("Testbilder ließen sich nicht erzeugen.")
             return 1

@@ -4,7 +4,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 DIR="$(mktemp -d)"
-P() { swift run -c release --package-path Packages/Pruefstand kirei-pruefstand "$@" 2>&1 | grep -v -E '^\[|Building|Build of product|Write |Compiling|Linking|FBBA'; }
+P() { swift run -c release --package-path Packages/Pruefstand kirei-pruefstand "$@" 2>&1 | grep --line-buffered -v -E '^\[|Building|Build of product|Write |Compiling|Linking|FBBA'; }
 
 stamp() { echo "== $1 ($(date -u +%H:%M:%S))"; }
 stamp beispiel; P beispiel "$DIR" || exit 1
