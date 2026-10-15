@@ -330,11 +330,9 @@ public actor AssetIndex {
     /// gelesenen Einträge über den Schritt hinaus fest und der Speicher wächst
     /// nicht von Scan zu Scan.
     private func withContext<Result>(_ body: (ModelContext) throws -> Result) rethrows -> Result {
-        try autoreleasepool {
-            let context = ModelContext(modelContainer)
-            context.autosaveEnabled = false
-            return try body(context)
-        }
+        let context = ModelContext(modelContainer)
+        context.autosaveEnabled = false
+        return try body(context)
     }
 
     private func entries(for ids: [AssetID], in context: ModelContext) throws -> [String: IndexedAsset] {
