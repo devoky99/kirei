@@ -17,6 +17,8 @@ MAX_PER_KIND = 10
 
 COMPILER = re.compile(r"^(/[^:\s][^:]*):(\d+):(\d+): (error|warning): (.*)$")
 TEST_ISSUE = re.compile(r"recorded an issue at ([^\s:]+):(\d+):(\d+): (.*)$")
+MACRO_ERROR = re.compile(r"^macro expansion [^:]+:\d+:\d+: error: (.*)$")
+MACRO_ORIGIN = re.compile(r"(/[^:\s][^:]*):(\d+):(\d+): note: expanded code originates here")
 TEST_SUMMARY = re.compile(r"Test run with (\d+) tests?(?: in \d+ suites?)? (passed|failed).*$")
 
 
@@ -48,7 +50,19 @@ def annotate(log_path: str) -> None:
     seen = set()
     counts = {"error": 0, "warning": 0}
 
-    for line in lines:
+    for number, line in enumerate(lines):
+        macro = MACRO_ERROR.match(line.strip())
+        if macro and counts["error"] < MAX_PER_KIND:
+            origin = next((MACRO_ORIGIN.search(l) for l in lines[number + 1 : number + 4] if MACRO_ORIGIN.search(l)), None)
+            if origin:
+                path, row, col = origin.groups()
+                key = (path, row, "error", macro.group(1))
+                if key not in seen:
+                    seen.add(key)
+                    counts["error"] += 1
+                    print(f"::error file={escape_property(relative(path))},line={row},col={col}::{escape(macro.group(1))}")
+            continue
+
         match = COMPILER.match(line.strip())
         if match:
             path, row, col, kind, message = match.groups()

@@ -178,7 +178,7 @@ struct LibraryScannerTests {
 
         let duplicates = try #require(results.groups(in: .exactDuplicates).first)
         #expect(duplicates.suggested.map(\.assetID) == [AssetID("d2")])
-        #expect(duplicates.suggested.allSatisfy(\.isPreselected))
+        #expect(duplicates.suggested.allSatisfy { $0.isPreselected })
 
         let similar = try #require(results.groups(in: .similar).first)
         #expect(similar.items.first?.assetID == AssetID("p2"))

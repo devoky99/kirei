@@ -179,7 +179,7 @@ struct DuplicateFinderTests {
         #expect(groups.count == 1)
         #expect(group.items[0].reasons == [.original])
         #expect(group.suggested.map(\.reasons) == [[.exactCopy]])
-        #expect(group.suggested.allSatisfy(\.isPreselected))
+        #expect(group.suggested.allSatisfy { $0.isPreselected })
     }
 
     @Test("Original nur in iCloud: wahrscheinliche Kopie, nicht vorausgewählt")
