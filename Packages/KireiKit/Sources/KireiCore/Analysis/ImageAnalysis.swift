@@ -53,6 +53,8 @@ public struct AnalyzedPhoto: Sendable, Equatable {
     public let aestheticScore: Float?
     public let isUtility: Bool
     public let sharpness: Double
+    /// Schon berechnete Gesichter, sonst `nil`.
+    public let faces: FaceSummary?
 
     public init(
         id: AssetID,
@@ -60,7 +62,8 @@ public struct AnalyzedPhoto: Sendable, Equatable {
         featurePrint: FeaturePrint?,
         aestheticScore: Float?,
         isUtility: Bool,
-        sharpness: Double
+        sharpness: Double,
+        faces: FaceSummary? = nil
     ) {
         self.id = id
         self.date = date
@@ -68,5 +71,6 @@ public struct AnalyzedPhoto: Sendable, Equatable {
         self.aestheticScore = aestheticScore
         self.isUtility = isUtility
         self.sharpness = sharpness
+        self.faces = faces
     }
 }

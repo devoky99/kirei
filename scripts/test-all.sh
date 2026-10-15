@@ -19,13 +19,18 @@ if [[ -z "$SIM_ID" ]]; then
 fi
 (cd Packages/KireiKit && xcodebuild test -scheme KireiKit-Package -destination "id=$SIM_ID" -quiet)
 
-step "App für iPhone und iPad bauen (Simulator)"
-xcodebuild build -project Kirei.xcodeproj -scheme Kirei \
+step "App für iPhone und iPad bauen (Simulator, Debug mit Prüfmodus)"
+xcodebuild build -project Kirei.xcodeproj -scheme Kirei -configuration Debug \
   -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO -quiet
 
-step "App für den Mac bauen"
-xcodebuild build -project Kirei.xcodeproj -scheme Kirei \
+step "App für den Mac bauen (Debug mit Prüfmodus)"
+xcodebuild build -project Kirei.xcodeproj -scheme Kirei -configuration Debug \
+  -destination 'generic/platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO -quiet
+
+step "App für den Mac bauen (Release, wie im App Store)"
+xcodebuild build -project Kirei.xcodeproj -scheme Kirei -configuration Release \
   -destination 'generic/platform=macOS' \
   CODE_SIGNING_ALLOWED=NO -quiet
 

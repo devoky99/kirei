@@ -73,14 +73,18 @@ final class IndexedAsset {
         contentHash = nil
     }
 
-    var analyzedPhoto: AnalyzedPhoto {
+    /// Gesichter nur, wenn sie für diese Version schon berechnet sind.
+    func analyzedPhoto(faceVersion version: Int) -> AnalyzedPhoto {
         AnalyzedPhoto(
             id: AssetID(assetID),
             date: hasDate ? sortDate : nil,
             featurePrint: featurePrintData.flatMap(FeaturePrint.init(data:)),
             aestheticScore: aestheticScore.map(Float.init),
             isUtility: isUtility,
-            sharpness: sharpness
+            sharpness: sharpness,
+            faces: faceVersion >= version
+                ? FaceSummary(faceCount: faceCount, minEyeOpenness: minEyeOpenness, meanCaptureQuality: faceQuality)
+                : nil
         )
     }
 }

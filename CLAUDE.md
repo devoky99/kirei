@@ -29,6 +29,7 @@ Versprechen: einmal kaufen, alles auf dem Gerät, nichts sammeln, lieber ein Vor
     - `Quality/`: Trefferquote mit Untergrenze (`PrecisionEstimate`) und Kalibrierung der Schwellen.
   - `KireiUI`: gemeinsame SwiftUI-Bausteine und Gestaltungswerte (`KireiTheme`).
 - `Packages/Pruefstand/`: Kommandozeilen-Werkzeug für den Mac, misst den Kern mit Testbildern statt Mediathek (Befehle unten).
+- `App/Shared/ReviewView.swift`: Prüfmodus für Prüfpunkt 1, nur in Debug-Builds (`#if DEBUG`). Texte dort nur auf Deutsch mit `Text(verbatim:)`, nicht im String Catalog, weil er nie ausgeliefert wird.
 - `Config/`: Einstellungen (`Kirei.xcconfig`), Info.plist-Ergänzungen, Mac-Berechtigungen. Die Mac-Sandbox hat absichtlich keine Netz-Berechtigung.
 
 ## Regeln für Code
@@ -55,7 +56,7 @@ Versprechen: einmal kaufen, alles auf dem Gerät, nichts sammeln, lieber ein Vor
 
 Eine Aufgabe ist erst erledigt, wenn alles stimmt, auf beiden Plattformen:
 
-1. `scripts/test-all.sh` ist grün (Kern-Tests auf Mac und iOS-Simulator, App für beide gebaut).
+1. `scripts/test-all.sh` ist grün (Kern-Tests auf Mac und iOS-Simulator, App in Debug für beide und in Release für den Mac gebaut).
 2. Neue Texte stehen im String Catalog auf Deutsch und Englisch.
 3. Jede neue Aktion hat Geste, Tastenkürzel und VoiceOver-Beschriftung.
 4. Größte Schriftstufe und dunkles Erscheinungsbild sind geprüft.
@@ -73,6 +74,7 @@ swift test --package-path Packages/KireiKit           # nur Kern-Tests auf dem M
 # Prüfstand (Befehle ohne Argument zeigen die Hilfe)
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand selbsttest
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand beispiel <Ordner>
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand last [Anzahl]
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand messen <Ordner>
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand kalibrieren <Ordner>
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand vorschlaege <Ordner>

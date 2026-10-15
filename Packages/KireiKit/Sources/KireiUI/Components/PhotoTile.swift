@@ -40,7 +40,8 @@ public struct PhotoTile: View {
             .animation(KireiTheme.Motion.gentle, value: thumbnail != nil)
     }
 
-    static func orientation(_ orientation: CGImagePropertyOrientation) -> Image.Orientation {
+    /// Ausrichtung aus ImageIO für SwiftUI-Bilder.
+    public static func orientation(_ orientation: CGImagePropertyOrientation) -> Image.Orientation {
         switch orientation {
         case .up: .up
         case .upMirrored: .upMirrored

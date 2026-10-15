@@ -53,10 +53,12 @@ public actor LibraryScanner {
         defer { ProcessInfo.processInfo.endActivity(activity) }
 
         let version = analyzer.version
+        let started = Date()
 
         // 1. Metadaten
         await onUpdate(.progress(ScanProgress(stage: .reading)))
         let records = try await source.fetchRecords()
+        let readingSeconds = Date().timeIntervalSince(started)
         await onUpdate(.records(records))
         let recordsByID = Dictionary(records.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -70,15 +72,21 @@ public actor LibraryScanner {
             counts: counts,
             isComplete: false
         )))
+        let firstResults = Date().timeIntervalSince(started)
 
+        let syncStarted = Date()
         try await index.sync(records)
         try await index.retryUnavailable()
+        let syncSeconds = Date().timeIntervalSince(syncStarted)
 
         // 2. Bildanalyse in Etappen
-        try await analyzePending(version: version, onUpdate: onUpdate)
+        let analysisStarted = Date()
+        let analyzedInThisRun = try await analyzePending(version: version, onUpdate: onUpdate)
+        let analysisSeconds = Date().timeIntervalSince(analysisStarted)
         counts = try await index.analysisCounts(version: version)
 
         // 3. Duplikate und ähnliche Fotos
+        let comparingStarted = Date()
         await onUpdate(.progress(ScanProgress(stage: .comparing)))
         let candidates = DuplicateFinder.candidates(in: records)
         let candidateIDs = candidates.flatMap { $0.map(\.id) }
@@ -95,13 +103,11 @@ public actor LibraryScanner {
         var grouper = SimilarityGrouper(settings: settings)
         var clusters: [SimilarityGrouper.Cluster] = []
         var blurCandidates: [AnalyzedPhoto] = []
-        var offset = 0
+        var cursor: IndexCursor?
         while true {
             try Task.checkCancellation()
-            let page = try await index.analyzedPhotos(version: version, offset: offset, limit: Self.pageSize)
-            if page.isEmpty { break }
-            offset += page.count
-            for photo in page {
+            let page = try await index.analyzedPhotos(version: version, after: cursor, limit: Self.pageSize)
+            for photo in page.photos {
                 // Serienbilder haben ihre eigene Kategorie.
                 guard let record = recordsByID[photo.id], record.isAnalyzable,
                       record.burstIdentifier == nil,
@@ -115,13 +121,27 @@ public actor LibraryScanner {
                 }
             }
             clusters += grouper.drainClosed()
+            guard let next = page.next else { break }
+            cursor = next
         }
         clusters += grouper.finish()
 
         // 4. Gesichter und bestes Foto
-        let clusteredIDs = clusters.flatMap { $0.members.map(\.id) }
-        try await analyzeFaces(clusteredIDs, version: version, onUpdate: onUpdate)
-        let faces = try await index.faces(for: clusteredIDs, version: version)
+        // Gesichter kommen schon beim Lesen mit; nur fehlende werden berechnet.
+        let clusteredMembers = clusters.flatMap(\.members)
+        let clusteredIDs = clusteredMembers.map(\.id)
+        let missingFaces = clusteredMembers.filter { $0.photo.faces == nil }.map(\.id)
+        try await analyzeFaces(missingFaces, version: version, onUpdate: onUpdate)
+        var faces: [AssetID: FaceSummary] = [:]
+        for member in clusteredMembers {
+            if let known = member.photo.faces {
+                faces[member.id] = known
+            }
+        }
+        if !missingFaces.isEmpty {
+            let fresh = try await index.faces(for: missingFaces, version: version)
+            faces.merge(fresh) { known, _ in known }
+        }
 
         let similarGroups = clusters.compactMap { cluster -> SuggestionGroup? in
             let members = cluster.members.compactMap { candidate -> GroupMember? in
@@ -147,7 +167,17 @@ public actor LibraryScanner {
             groups: SuggestionBuilder.ordered(groups),
             summary: summary,
             counts: counts,
-            isComplete: true
+            isComplete: true,
+            metrics: ScanMetrics(
+                firstResultsSeconds: firstResults,
+                analysisSeconds: analysisSeconds,
+                analyzedInThisRun: analyzedInThisRun,
+                totalSeconds: Date().timeIntervalSince(started),
+                peakMemoryBytes: MemoryUsage.peakResidentBytes(),
+                readingSeconds: readingSeconds,
+                syncSeconds: syncSeconds,
+                comparingSeconds: Date().timeIntervalSince(comparingStarted)
+            )
         )
         await onUpdate(.progress(ScanProgress(stage: .finished)))
         await onUpdate(.results(results))
@@ -156,8 +186,10 @@ public actor LibraryScanner {
 
     // MARK: Bildanalyse
 
-    private func analyzePending(version: Int, onUpdate: @escaping @Sendable (ScanUpdate) async -> Void) async throws {
+    /// Analysiert alle offenen Fotos und sagt, wie viele davon ein Ergebnis bekamen.
+    private func analyzePending(version: Int, onUpdate: @escaping @Sendable (ScanUpdate) async -> Void) async throws -> Int {
         var counts = try await index.analysisCounts(version: version)
+        var analyzed = 0
         while true {
             try Task.checkCancellation()
             let ids = try await index.pendingAnalysis(version: version, limit: Self.batchSize)
@@ -168,7 +200,9 @@ public actor LibraryScanner {
             let outcomes = await Self.analyzeBatch(ids, source: source, analyzer: analyzer, parallelism: parallelism)
             try await index.save(analyses: outcomes, version: version)
             counts.processed += outcomes.count
+            analyzed += outcomes.filter { $0.analysis != nil }.count
         }
+        return analyzed
     }
 
     /// Wie viel parallel gerechnet wird. Bei kritischer Temperatur wird pausiert.
@@ -226,7 +260,7 @@ public actor LibraryScanner {
         version: Int,
         onUpdate: @escaping @Sendable (ScanUpdate) async -> Void
     ) async throws {
-        let pending = try await index.pendingFaces(among: ids, version: version)
+        let pending = ids
         guard !pending.isEmpty else { return }
 
         var done = 0

@@ -111,7 +111,10 @@ enum CSV {
             row.append(field)
             rows.append(row)
         }
-        return rows.filter { !($0.count == 1 && $0[0].isEmpty) }
+        // Leere Zeilen und Kommentare (# …) überspringen.
+        return rows.filter { row in
+            !(row.count == 1 && row[0].isEmpty) && !(row.first?.hasPrefix("#") ?? false)
+        }
     }
 }
 

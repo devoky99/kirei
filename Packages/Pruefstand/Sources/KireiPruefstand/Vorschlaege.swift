@@ -45,6 +45,9 @@ enum Vorschlaege {
 
         print("")
         print("Fotos analysiert: \(Zahl.ganz(results.counts.processed - results.counts.unavailable)) von \(Zahl.ganz(results.counts.analyzable))")
+        if let metrics = results.metrics {
+            Messwerte.drucken(metrics)
+        }
         for category in SuggestionCategory.allCases {
             let groups = results.groups(in: category)
             guard !groups.isEmpty else { continue }

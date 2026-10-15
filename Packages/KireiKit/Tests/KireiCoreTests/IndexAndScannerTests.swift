@@ -42,7 +42,7 @@ struct AssetIndexTests {
         #expect(try await index.pendingAnalysis(version: 1, limit: 10).isEmpty)
         #expect(try await index.analysisCounts(version: 1) == AnalysisCounts(analyzable: 2, processed: 2, unavailable: 1))
 
-        let photos = try await index.analyzedPhotos(version: 1, offset: 0, limit: 10)
+        let photos = try await index.analyzedPhotos(version: 1, after: nil, limit: 10).photos
         #expect(photos.map(\.id) == [AssetID("new")])
         #expect(photos.first?.featurePrint == testPrint(axis: 1))
         #expect(photos.first?.sharpness == 42)
@@ -53,6 +53,40 @@ struct AssetIndexTests {
         // Ohne Vorschaubild wird es beim nächsten Scan erneut versucht.
         try await index.retryUnavailable()
         #expect(try await index.pendingAnalysis(version: 1, limit: 10) == [AssetID("old")])
+    }
+
+    @Test("Seitenweises Lesen liefert jedes Foto genau einmal, auch bei gleichem Datum")
+    func pagingWithCursor() async throws {
+        let index = try AssetIndex.inMemory()
+        // Fünf Fotos, drei davon mit derselben Aufnahmezeit.
+        let records = [photo("e", at: 30), photo("a", at: 10), photo("c", at: 10), photo("b", at: 10), photo("d", at: 20)]
+        try await index.sync(records)
+        let analysis = ImageAnalysis(featurePrint: nil, aestheticScore: 0, isUtility: false, sharpness: 1)
+        try await index.save(analyses: records.map { AnalysisOutcome(id: $0.id, analysis: analysis) }, version: 1)
+
+        var seen: [String] = []
+        var cursor: IndexCursor?
+        while true {
+            let page = try await index.analyzedPhotos(version: 1, after: cursor, limit: 2)
+            seen += page.photos.map(\.id.rawValue)
+            guard let next = page.next else { break }
+            cursor = next
+        }
+        #expect(seen == ["a", "b", "c", "d", "e"])
+    }
+
+    @Test("Zweiter Abgleich ohne Änderungen setzt nichts zurück, auch bei Zahlen in Kennungen")
+    func repeatedSyncKeepsAnalysis() async throws {
+        let index = try AssetIndex.inMemory()
+        // Kennungen, die „natürlich“ und Zeichen für Zeichen verschieden sortieren.
+        let records = (0..<25).map { photo("item-\($0)", at: Double($0 % 5)) }
+        try await index.sync(records)
+        let analysis = ImageAnalysis(featurePrint: nil, aestheticScore: 0, isUtility: false, sharpness: 1)
+        try await index.save(analyses: records.map { AnalysisOutcome(id: $0.id, analysis: analysis) }, version: 1)
+
+        let again = try await index.sync(records)
+        #expect(again == IndexSyncResult(inserted: 0, updated: 0, removed: 0))
+        #expect(try await index.pendingAnalysis(version: 1, limit: 100).isEmpty)
     }
 
     @Test("Bearbeitete Fotos werden neu analysiert")
@@ -202,6 +236,11 @@ struct LibraryScannerTests {
         #expect(results.groups(in: .blurry).isEmpty)
         #expect(results.counts == AnalysisCounts(analyzable: 8, processed: 8, unavailable: 1))
         #expect(await counter.count == 7)
+
+        let metrics = try #require(results.metrics)
+        #expect(metrics.analyzedInThisRun == 7)
+        #expect(metrics.peakMemoryBytes > 0)
+        #expect(metrics.firstResultsSeconds <= metrics.totalSeconds)
         #expect(await log.sawRecords)
         #expect(await log.partialResults >= 1)
     }
@@ -218,5 +257,6 @@ struct LibraryScannerTests {
 
         #expect(await counter.count == analysesAfterFirst)
         #expect(second.groups == first.groups)
+        #expect(second.metrics?.analyzedInThisRun == 0)
     }
 }
