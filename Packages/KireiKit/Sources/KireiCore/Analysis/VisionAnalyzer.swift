@@ -8,6 +8,11 @@ import Vision
 ///
 /// Feature Print und Ästhetik-Score für jedes Foto, Gesichter nur für Fotos
 /// in Gruppen. Alles läuft auf dem Gerät.
+///
+/// Vision rechnet synchron und blockiert dabei seinen Thread. Deshalb laufen
+/// alle Aufrufe auf einer eigenen Warteschlange und nie im gemeinsamen
+/// Thread-Pool von Swift. Sonst können sich mehrere parallele Analysen
+/// gegenseitig festfahren.
 public struct VisionAnalyzer: ImageAnalyzer {
     /// Version 1: Feature Print Revision 2, Ästhetik-Score, Laplace-Schärfe.
     public let version = 1
@@ -16,9 +21,29 @@ public struct VisionAnalyzer: ImageAnalyzer {
     /// etwa Menschen im Hintergrund.
     static let minimumFaceWidth: CGFloat = 0.08
 
+    /// Eigene Warteschlange für die blockierenden Vision-Aufrufe.
+    private static let queue = DispatchQueue(label: "kirei.vision", qos: .utility, attributes: .concurrent)
+
     public init() {}
 
     public func analyze(_ thumbnail: Thumbnail) async throws -> ImageAnalysis {
+        try await Self.offPool { try Self.analyzeNow(thumbnail) }
+    }
+
+    public func analyzeFaces(_ thumbnail: Thumbnail) async throws -> FaceSummary {
+        try await Self.offPool { try Self.analyzeFacesNow(thumbnail) }
+    }
+
+    /// Führt blockierende Arbeit auf der eigenen Warteschlange aus.
+    static func offPool<Value: Sendable>(_ work: @escaping @Sendable () throws -> Value) async throws -> Value {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                continuation.resume(with: Result { try work() })
+            }
+        }
+    }
+
+    static func analyzeNow(_ thumbnail: Thumbnail) throws -> ImageAnalysis {
         let handler = VNImageRequestHandler(
             cgImage: thumbnail.cgImage,
             orientation: thumbnail.orientation,
@@ -44,7 +69,7 @@ public struct VisionAnalyzer: ImageAnalyzer {
         )
     }
 
-    public func analyzeFaces(_ thumbnail: Thumbnail) async throws -> FaceSummary {
+    static func analyzeFacesNow(_ thumbnail: Thumbnail) throws -> FaceSummary {
         let handler = VNImageRequestHandler(
             cgImage: thumbnail.cgImage,
             orientation: thumbnail.orientation,
@@ -58,10 +83,10 @@ public struct VisionAnalyzer: ImageAnalyzer {
 
         let imageSize = thumbnail.orientedSize
         let faces = (landmarksRequest.results ?? [])
-            .filter { $0.boundingBox.width >= Self.minimumFaceWidth }
-        let openness = faces.compactMap { Self.eyeOpenness(of: $0, imageSize: imageSize) }
+            .filter { $0.boundingBox.width >= minimumFaceWidth }
+        let openness = faces.compactMap { eyeOpenness(of: $0, imageSize: imageSize) }
         let qualities = (qualityRequest.results ?? [])
-            .filter { $0.boundingBox.width >= Self.minimumFaceWidth }
+            .filter { $0.boundingBox.width >= minimumFaceWidth }
             .compactMap(\.faceCaptureQuality)
 
         return FaceSummary(
