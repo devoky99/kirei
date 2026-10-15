@@ -20,8 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Xcode-Version
-        run: xcodebuild -version
+      # Immer das neueste fertige Xcode, wie auf dem Mac zum Entwickeln.
+      - name: Neuestes Xcode wählen
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -v -i -E 'beta|rc' | sort -V | tail -n 1)
+          sudo xcode-select -s "$XCODE"
+          VORHANDEN=$(ls -d /Applications/Xcode_*.app | xargs -n1 basename | tr '\n' ' ')
+          echo "::notice title=Xcode::$(xcodebuild -version | tr '\n' ' ') (vorhanden: $VORHANDEN)"
 
       - name: Bauen und testen
         run: |
