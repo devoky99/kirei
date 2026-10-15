@@ -7,7 +7,7 @@ import SwiftData
 @Model
 final class IndexedAsset {
     // Schnelle Abfragen nach offenen Analysen und nach Datum.
-    #Index<IndexedAsset>([\.analysisVersion], [\.sortDate, \.assetID], [\.analysisUnavailable])
+    #Index<IndexedAsset>([\.analysisVersion], [\.sortDate], [\.analysisUnavailable])
 
     @Attribute(.unique) var assetID: String
     /// Aufnahmedatum, ohne Datum `distantPast`. Für die Sortierung.

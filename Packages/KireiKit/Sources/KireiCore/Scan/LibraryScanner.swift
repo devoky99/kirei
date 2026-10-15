@@ -107,9 +107,7 @@ public actor LibraryScanner {
         while true {
             try Task.checkCancellation()
             let page = try await index.analyzedPhotos(version: version, after: cursor, limit: Self.pageSize)
-            guard let last = page.last else { break }
-            cursor = IndexCursor(after: last)
-            for photo in page {
+            for photo in page.photos {
                 // Serienbilder haben ihre eigene Kategorie.
                 guard let record = recordsByID[photo.id], record.isAnalyzable,
                       record.burstIdentifier == nil,
@@ -123,6 +121,8 @@ public actor LibraryScanner {
                 }
             }
             clusters += grouper.drainClosed()
+            guard let next = page.next else { break }
+            cursor = next
         }
         clusters += grouper.finish()
 

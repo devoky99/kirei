@@ -23,15 +23,24 @@ public struct FaceOutcome: Sendable, Equatable {
     }
 }
 
-/// Wo das seitenweise Lesen weitermacht: Datum und Kennung des letzten Eintrags.
+/// Wo das seitenweise Lesen weitermacht: nach diesem Aufnahmedatum.
+///
+/// Geblättert wird nur nach Datum, weil die Datenbank Zahlen in Kennungen
+/// „natürlich“ sortiert, beim Vergleichen aber Zeichen für Zeichen vorgeht.
+/// Fotos mit gleichem Datum kommen immer gemeinsam auf eine Seite.
 public struct IndexCursor: Sendable, Equatable {
     public let sortDate: Date
-    public let assetID: String
 
-    public init(after photo: AnalyzedPhoto) {
-        sortDate = photo.date ?? .distantPast
-        assetID = photo.id.rawValue
+    public init(sortDate: Date) {
+        self.sortDate = sortDate
     }
+}
+
+/// Eine Seite analysierter Fotos und wo es weitergeht.
+public struct AnalyzedPage: Sendable {
+    public let photos: [AnalyzedPhoto]
+    /// `nil`, wenn alles gelesen ist. Eine Seite kann leer sein und trotzdem weitergehen.
+    public let next: IndexCursor?
 }
 
 /// Was der Abgleich mit der Mediathek verändert hat.
@@ -106,24 +115,19 @@ public actor AssetIndex {
         }
         var result = IndexSyncResult(inserted: 0, updated: 0, removed: 0)
 
-        // 1. Vorhandene Einträge seitenweise abgleichen.
-        var cursor: String?
+        // 1. Vorhandene Einträge seitenweise nach Datum abgleichen. Ein Eintrag,
+        //    dessen Datum sich ändert, kann später noch einmal auftauchen und
+        //    wird dann übersprungen.
+        var processed = Set<String>()
+        var cursor: Date?
         while true {
-            let lastID: String? = try withContext { context in
-                var descriptor: FetchDescriptor<IndexedAsset>
-                if let after = cursor {
-                    descriptor = FetchDescriptor<IndexedAsset>(
-                        predicate: #Predicate<IndexedAsset> { $0.assetID > after },
-                        sortBy: [SortDescriptor(\.assetID)]
-                    )
-                } else {
-                    descriptor = FetchDescriptor<IndexedAsset>(sortBy: [SortDescriptor(\.assetID)])
-                }
-                descriptor.fetchLimit = Self.saveChunk
-                descriptor.propertiesToFetch = [\.assetID, \.sortDate, \.modificationDate, \.isAnalyzable]
+            let lastDate: Date? = try withContext { context in
+                var page = try Self.datePage(in: context, after: cursor, limit: Self.saveChunk)
+                guard let lastDate = page.last?.sortDate else { return nil }
+                page += try Self.sameDate(lastDate, in: context)
 
-                let page = try context.fetch(descriptor)
                 for entry in page {
+                    guard processed.insert(entry.assetID).inserted else { continue }
                     if let record = remaining.removeValue(forKey: entry.assetID) {
                         let dateChanged = entry.sortDate != (record.creationDate ?? .distantPast)
                         if entry.modificationDate != record.modificationDate
@@ -138,10 +142,10 @@ public actor AssetIndex {
                     }
                 }
                 try context.save()
-                return page.last?.assetID
+                return lastDate
             }
-            guard let lastID else { break }
-            cursor = lastID
+            guard let lastDate else { break }
+            cursor = lastDate
         }
 
         // 2. Neue Einträge in Paketen anlegen.
@@ -227,37 +231,27 @@ public actor AssetIndex {
         }
     }
 
-    /// Analysierte Fotos, älteste zuerst, seitenweise.
+    /// Analysierte Fotos, älteste zuerst, seitenweise nach Datum.
     ///
-    /// Liest ab dem letzten Eintrag der vorigen Seite weiter statt mit wachsendem
-    /// Versatz. So bleibt jede Seite gleich schnell, auch bei 100.000 Fotos.
-    public func analyzedPhotos(version: Int, after cursor: IndexCursor?, limit: Int) throws -> [AnalyzedPhoto] {
-        return try withContext { context in
-            var descriptor: FetchDescriptor<IndexedAsset>
-            if let cursor {
-                let date = cursor.sortDate
-                let id = cursor.assetID
-                descriptor = FetchDescriptor<IndexedAsset>(
-                    predicate: #Predicate<IndexedAsset> {
-                        $0.isAnalyzable == true
-                            && $0.analysisVersion >= version
-                            && $0.analysisUnavailable == false
-                            && ($0.sortDate > date || ($0.sortDate == date && $0.assetID > id))
-                    },
-                    sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
-                )
-            } else {
-                descriptor = FetchDescriptor<IndexedAsset>(
-                    predicate: #Predicate<IndexedAsset> {
-                        $0.isAnalyzable == true
-                            && $0.analysisVersion >= version
-                            && $0.analysisUnavailable == false
-                    },
-                    sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
-                )
-            }
-            descriptor.fetchLimit = limit
-            return try context.fetch(descriptor).map { $0.analyzedPhoto(faceVersion: version) }
+    /// Eine Seite enthält etwa `limit` Fotos und immer alle Fotos mit dem
+    /// Datum des letzten Eintrags. So geht beim Weiterlesen keines verloren.
+    public func analyzedPhotos(version: Int, after cursor: IndexCursor?, limit: Int) throws -> AnalyzedPage {
+        try withContext { context in
+            var page = try Self.datePage(in: context, after: cursor?.sortDate, limit: limit)
+            guard let lastDate = page.last?.sortDate else { return AnalyzedPage(photos: [], next: nil) }
+            page += try Self.sameDate(lastDate, in: context)
+
+            var seen = Set<String>()
+            let photos = page
+                .filter { entry in
+                    seen.insert(entry.assetID).inserted
+                        && entry.isAnalyzable
+                        && entry.analysisVersion >= version
+                        && !entry.analysisUnavailable
+                }
+                .sorted { ($0.sortDate, $0.assetID) < ($1.sortDate, $1.assetID) }
+                .map { $0.analyzedPhoto(faceVersion: version) }
+            return AnalyzedPage(photos: photos, next: IndexCursor(sortDate: lastDate))
         }
     }
 
@@ -346,6 +340,28 @@ public actor AssetIndex {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
         return try body(context)
+    }
+
+    /// Bis zu `limit` Einträge nach `after`, aufsteigend nach Datum.
+    private static func datePage(in context: ModelContext, after: Date?, limit: Int) throws -> [IndexedAsset] {
+        var descriptor: FetchDescriptor<IndexedAsset>
+        if let after {
+            descriptor = FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> { $0.sortDate > after },
+                sortBy: [SortDescriptor(\.sortDate)]
+            )
+        } else {
+            descriptor = FetchDescriptor<IndexedAsset>(sortBy: [SortDescriptor(\.sortDate)])
+        }
+        descriptor.fetchLimit = limit
+        return try context.fetch(descriptor)
+    }
+
+    /// Alle Einträge mit genau diesem Datum.
+    private static func sameDate(_ date: Date, in context: ModelContext) throws -> [IndexedAsset] {
+        try context.fetch(FetchDescriptor<IndexedAsset>(
+            predicate: #Predicate<IndexedAsset> { $0.sortDate == date }
+        ))
     }
 
     private func entries(for ids: [AssetID], in context: ModelContext) throws -> [String: IndexedAsset] {

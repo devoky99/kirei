@@ -42,7 +42,7 @@ struct AssetIndexTests {
         #expect(try await index.pendingAnalysis(version: 1, limit: 10).isEmpty)
         #expect(try await index.analysisCounts(version: 1) == AnalysisCounts(analyzable: 2, processed: 2, unavailable: 1))
 
-        let photos = try await index.analyzedPhotos(version: 1, after: nil, limit: 10)
+        let photos = try await index.analyzedPhotos(version: 1, after: nil, limit: 10).photos
         #expect(photos.map(\.id) == [AssetID("new")])
         #expect(photos.first?.featurePrint == testPrint(axis: 1))
         #expect(photos.first?.sharpness == 42)
@@ -68,11 +68,25 @@ struct AssetIndexTests {
         var cursor: IndexCursor?
         while true {
             let page = try await index.analyzedPhotos(version: 1, after: cursor, limit: 2)
-            guard let last = page.last else { break }
-            seen += page.map(\.id.rawValue)
-            cursor = IndexCursor(after: last)
+            seen += page.photos.map(\.id.rawValue)
+            guard let next = page.next else { break }
+            cursor = next
         }
         #expect(seen == ["a", "b", "c", "d", "e"])
+    }
+
+    @Test("Zweiter Abgleich ohne Änderungen setzt nichts zurück, auch bei Zahlen in Kennungen")
+    func repeatedSyncKeepsAnalysis() async throws {
+        let index = try AssetIndex.inMemory()
+        // Kennungen, die „natürlich“ und Zeichen für Zeichen verschieden sortieren.
+        let records = (0..<25).map { photo("item-\($0)", at: Double($0 % 5)) }
+        try await index.sync(records)
+        let analysis = ImageAnalysis(featurePrint: nil, aestheticScore: 0, isUtility: false, sharpness: 1)
+        try await index.save(analyses: records.map { AnalysisOutcome(id: $0.id, analysis: analysis) }, version: 1)
+
+        let again = try await index.sync(records)
+        #expect(again == IndexSyncResult(inserted: 0, updated: 0, removed: 0))
+        #expect(try await index.pendingAnalysis(version: 1, limit: 100).isEmpty)
     }
 
     @Test("Bearbeitete Fotos werden neu analysiert")
