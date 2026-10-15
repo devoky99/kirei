@@ -46,6 +46,7 @@ swift run -c release --package-path Packages/Pruefstand kirei-pruefstand <Befehl
 | --- | --- |
 | `selbsttest` | prüft, ob Vision auf diesem Mac rechnet |
 | `beispiel <Ordner>` | legt erzeugte Beispielbilder an, um die Befehle auszuprobieren |
+| `last [Anzahl]` | Lasttest des Kerns mit erzeugten Einträgen, ohne Vision (Standard 20.000) |
 | `messen <Ordner>` | Zeit pro Foto, hochgerechnet auf 20.000 Fotos |
 | `kalibrieren <Ordner>` | schlägt Schwellen aus markierten Beispielen vor |
 | `vorschlaege <Ordner>` | läuft wie die App und schreibt die Vorschläge „ähnlich“ in eine Prüfseite |
@@ -61,7 +62,9 @@ Testdaten/
   augen_zu/  augen_offen/
 ```
 
-**Prüfpunkt 1:** `vorschlaege` auf einen Export der eigenen Mediathek anwenden (in Fotos: Ablage, Exportieren, Unbearbeitetes Original), die Prüfseite im Browser öffnen, jeden Vorschlag mit R oder F bewerten, „Urteile speichern“ und die Datei mit `auswerten` prüfen. Bestanden bei mindestens 1.000 geprüften Vorschlägen und einer Untergrenze der Trefferquote von mindestens 98 %.
+**Prüfpunkt 1 in der App (empfohlen):** Die Debug-Version hat in der Übersicht einen „Prüfmodus“. Er zeigt jeden Vorschlag „ähnlich“ groß neben dem behaltenen Foto, bewertet wird mit R (richtig) und F (falsch), am Mac und am iPad auch mit den Pfeiltasten. Oben stehen Trefferquote, Untergrenze und die Messwerte des Scans (erste Ergebnisse, Analysezeit, Speicher). „Urteile exportieren“ teilt eine CSV ohne Kennungen und Bilder, nur mit Abstand, Gründen und Urteil. Sie lässt sich mit `auswerten` prüfen und hilft beim Einstellen der Schwellen.
+
+**Prüfpunkt 1 im Prüfstand:** `vorschlaege` auf einen Export der eigenen Mediathek anwenden (in Fotos: Ablage, Exportieren, Unbearbeitetes Original), die Prüfseite im Browser öffnen, jeden Vorschlag mit R oder F bewerten, „Urteile speichern“ und die Datei mit `auswerten` prüfen. Bestanden bei mindestens 1.000 geprüften Vorschlägen und einer Untergrenze der Trefferquote von mindestens 98 %.
 
 ## Grundsätze
 

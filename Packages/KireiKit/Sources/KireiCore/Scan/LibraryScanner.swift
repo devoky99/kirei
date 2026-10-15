@@ -99,12 +99,12 @@ public actor LibraryScanner {
         var grouper = SimilarityGrouper(settings: settings)
         var clusters: [SimilarityGrouper.Cluster] = []
         var blurCandidates: [AnalyzedPhoto] = []
-        var offset = 0
+        var cursor: IndexCursor?
         while true {
             try Task.checkCancellation()
-            let page = try await index.analyzedPhotos(version: version, offset: offset, limit: Self.pageSize)
-            if page.isEmpty { break }
-            offset += page.count
+            let page = try await index.analyzedPhotos(version: version, after: cursor, limit: Self.pageSize)
+            guard let last = page.last else { break }
+            cursor = IndexCursor(after: last)
             for photo in page {
                 // Serienbilder haben ihre eigene Kategorie.
                 guard let record = recordsByID[photo.id], record.isAnalyzable,

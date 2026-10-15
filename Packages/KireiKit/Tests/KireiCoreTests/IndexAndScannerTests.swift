@@ -42,7 +42,7 @@ struct AssetIndexTests {
         #expect(try await index.pendingAnalysis(version: 1, limit: 10).isEmpty)
         #expect(try await index.analysisCounts(version: 1) == AnalysisCounts(analyzable: 2, processed: 2, unavailable: 1))
 
-        let photos = try await index.analyzedPhotos(version: 1, offset: 0, limit: 10)
+        let photos = try await index.analyzedPhotos(version: 1, after: nil, limit: 10)
         #expect(photos.map(\.id) == [AssetID("new")])
         #expect(photos.first?.featurePrint == testPrint(axis: 1))
         #expect(photos.first?.sharpness == 42)
@@ -53,6 +53,26 @@ struct AssetIndexTests {
         // Ohne Vorschaubild wird es beim nächsten Scan erneut versucht.
         try await index.retryUnavailable()
         #expect(try await index.pendingAnalysis(version: 1, limit: 10) == [AssetID("old")])
+    }
+
+    @Test("Seitenweises Lesen liefert jedes Foto genau einmal, auch bei gleichem Datum")
+    func pagingWithCursor() async throws {
+        let index = try AssetIndex.inMemory()
+        // Fünf Fotos, drei davon mit derselben Aufnahmezeit.
+        let records = [photo("e", at: 30), photo("a", at: 10), photo("c", at: 10), photo("b", at: 10), photo("d", at: 20)]
+        try await index.sync(records)
+        let analysis = ImageAnalysis(featurePrint: nil, aestheticScore: 0, isUtility: false, sharpness: 1)
+        try await index.save(analyses: records.map { AnalysisOutcome(id: $0.id, analysis: analysis) }, version: 1)
+
+        var seen: [String] = []
+        var cursor: IndexCursor?
+        while true {
+            let page = try await index.analyzedPhotos(version: 1, after: cursor, limit: 2)
+            guard let last = page.last else { break }
+            seen += page.map(\.id.rawValue)
+            cursor = IndexCursor(after: last)
+        }
+        #expect(seen == ["a", "b", "c", "d", "e"])
     }
 
     @Test("Bearbeitete Fotos werden neu analysiert")

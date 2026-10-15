@@ -23,6 +23,17 @@ public struct FaceOutcome: Sendable, Equatable {
     }
 }
 
+/// Wo das seitenweise Lesen weitermacht: Datum und Kennung des letzten Eintrags.
+public struct IndexCursor: Sendable, Equatable {
+    public let sortDate: Date
+    public let assetID: String
+
+    public init(after photo: AnalyzedPhoto) {
+        sortDate = photo.date ?? .distantPast
+        assetID = photo.id.rawValue
+    }
+}
+
 /// Was der Abgleich mit der Mediathek verändert hat.
 public struct IndexSyncResult: Sendable, Equatable {
     public var inserted: Int
@@ -193,17 +204,34 @@ public actor AssetIndex {
         return AnalysisCounts(analyzable: analyzable, processed: processed, unavailable: unavailable)
     }
 
-    /// Analysierte Fotos mit Datum, älteste zuerst, seitenweise.
-    public func analyzedPhotos(version: Int, offset: Int, limit: Int) throws -> [AnalyzedPhoto] {
-        var descriptor = FetchDescriptor<IndexedAsset>(
-            predicate: #Predicate<IndexedAsset> {
-                $0.isAnalyzable == true
-                    && $0.analysisVersion >= version
-                    && $0.analysisUnavailable == false
-            },
-            sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
-        )
-        descriptor.fetchOffset = offset
+    /// Analysierte Fotos, älteste zuerst, seitenweise.
+    ///
+    /// Liest ab dem letzten Eintrag der vorigen Seite weiter statt mit wachsendem
+    /// Versatz. So bleibt jede Seite gleich schnell, auch bei 100.000 Fotos.
+    public func analyzedPhotos(version: Int, after cursor: IndexCursor?, limit: Int) throws -> [AnalyzedPhoto] {
+        var descriptor: FetchDescriptor<IndexedAsset>
+        if let cursor {
+            let date = cursor.sortDate
+            let id = cursor.assetID
+            descriptor = FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> {
+                    $0.isAnalyzable == true
+                        && $0.analysisVersion >= version
+                        && $0.analysisUnavailable == false
+                        && ($0.sortDate > date || ($0.sortDate == date && $0.assetID > id))
+                },
+                sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
+            )
+        } else {
+            descriptor = FetchDescriptor<IndexedAsset>(
+                predicate: #Predicate<IndexedAsset> {
+                    $0.isAnalyzable == true
+                        && $0.analysisVersion >= version
+                        && $0.analysisUnavailable == false
+                },
+                sortBy: [SortDescriptor(\.sortDate), SortDescriptor(\.assetID)]
+            )
+        }
         descriptor.fetchLimit = limit
         return try modelContext.fetch(descriptor).map(\.analyzedPhoto)
     }
