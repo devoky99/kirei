@@ -1,45 +1,73 @@
 import Foundation
-import KireiCore
 
-// Prüfstand, Stand Phase 0: liest einen Ordner mit Testbildern so, wie der
-// Kern später die Mediathek liest, und misst die Zeit für die Vorschaubilder.
-// Ab Phase 1 kommen die markierten Paare und die Trefferquote dazu.
+// Prüfstand für Kirei: misst den Analyse-Kern auf dem Mac mit Testbildern
+// statt der Mediathek. Testbilder bleiben lokal und gehören nie ins Repo.
+
+enum Hilfe {
+    static let text = """
+Prüfstand für Kirei
+
+  kirei-pruefstand selbsttest
+      Prüft, ob die Vision-Analyse auf diesem Mac läuft.
+
+  kirei-pruefstand messen <Ordner>
+      Misst die Zeit pro Foto und rechnet auf 20.000 Fotos hoch.
+
+  kirei-pruefstand kalibrieren <Ordner>
+      Schlägt Schwellen aus markierten Beispielen vor. Erwartet Unterordner:
+        aehnlich/<serie>/       Fotos, die als fast gleich gelten sollen
+        verschieden/<serie>/    ähnliche Motive, die getrennt bleiben sollen
+        unscharf/  scharf/      einzelne Fotos
+        augen_zu/  augen_offen/ Fotos mit Gesichtern
+
+  kirei-pruefstand vorschlaege <Ordner>
+      Läuft wie die App über den Ordner und schreibt die Vorschläge
+      „ähnlich“ zum Prüfen in kirei-vorschlaege.html und .csv.
+
+  kirei-pruefstand auswerten <Datei.csv>
+      Zählt die Urteile und prüft Prüfpunkt 1 (mindestens 1.000 geprüfte
+      Vorschläge, Untergrenze der Trefferquote mindestens 98 %).
+
+Aufruf aus dem Repo:
+  swift run -c release --package-path Packages/Pruefstand kirei-pruefstand <Befehl>
+"""
+
+    /// Der Ordner aus dem zweiten Argument, sonst Abbruch mit Hinweis.
+    static func ordner(_ arguments: [String]) -> URL {
+        guard arguments.count >= 2 else {
+            print(text)
+            exit(64)
+        }
+        let url = URL(filePath: (arguments[1] as NSString).expandingTildeInPath, directoryHint: .isDirectory)
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            print("Ordner nicht gefunden: \(url.path)")
+            exit(66)
+        }
+        return url.standardizedFileURL
+    }
+}
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 
-guard let path = arguments.first else {
-    print("""
-    Aufruf: swift run --package-path Packages/Pruefstand kirei-pruefstand <Ordner>
-
-    Der Ordner enthält Testbilder (JPEG, HEIC, PNG). Er bleibt lokal und
-    gehört nicht ins Repo.
-    """)
-    exit(64)
-}
-
-let folder = URL(filePath: path, directoryHint: .isDirectory).standardizedFileURL
-let source = FolderPhotoSource(folder: folder)
-
-let clock = ContinuousClock()
-let start = clock.now
-
-let records = try await source.fetchRecords()
-let listed = clock.now
-
-var loaded = 0
-for record in records {
-    if await source.thumbnail(for: record.id, maxPixelSize: ScanPolicy.gridThumbnailPixelSize) != nil {
-        loaded += 1
+let status: Int32
+switch arguments.first {
+case "selbsttest":
+    status = await Selbsttest.run()
+case "messen":
+    status = await Messen.run(folder: Hilfe.ordner(arguments))
+case "kalibrieren":
+    status = await Kalibrieren.run(folder: Hilfe.ordner(arguments))
+case "vorschlaege":
+    status = await Vorschlaege.run(folder: Hilfe.ordner(arguments))
+case "auswerten":
+    guard arguments.count >= 2 else {
+        print(Hilfe.text)
+        exit(64)
     }
+    status = Auswerten.run(file: URL(filePath: (arguments[1] as NSString).expandingTildeInPath))
+default:
+    print(Hilfe.text)
+    status = arguments.isEmpty ? 0 : 64
 }
-let finished = clock.now
-
-let thumbnailTime = finished - listed
-let perImage = records.isEmpty ? Duration.zero : thumbnailTime / records.count
-
-print("Ordner:          \(folder.path)")
-print("Bilder gefunden: \(records.count)")
-print("Vorschau geladen: \(loaded)")
-print("Einlesen:        \((listed - start).formatted(.units(allowed: [.seconds, .milliseconds])))")
-print("Vorschaubilder:  \(thumbnailTime.formatted(.units(allowed: [.seconds, .milliseconds])))")
-print("Pro Bild:        \(perImage.formatted(.units(allowed: [.milliseconds], fractionalPart: .show(length: 1))))")
+exit(status)

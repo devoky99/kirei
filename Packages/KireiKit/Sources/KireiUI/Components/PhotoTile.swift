@@ -1,16 +1,17 @@
-import CoreGraphics
+import ImageIO
+import KireiCore
 import SwiftUI
 
-/// Quadratische Fotokachel für das Raster auf allen Geräten.
+/// Quadratische Fotokachel für Raster und Gruppen auf allen Geräten.
 ///
 /// Die Kachel selbst ist für VoiceOver unsichtbar. Die Beschriftung setzt
 /// die Ansicht, die weiß, was das Foto ist.
 public struct PhotoTile: View {
-    private let image: CGImage?
+    private let thumbnail: Thumbnail?
     private let badgeSystemImage: String?
 
-    public init(image: CGImage?, badgeSystemImage: String? = nil) {
-        self.image = image
+    public init(thumbnail: Thumbnail?, badgeSystemImage: String? = nil) {
+        self.thumbnail = thumbnail
         self.badgeSystemImage = badgeSystemImage
     }
 
@@ -19,8 +20,8 @@ public struct PhotoTile: View {
             .fill(.quaternary)
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                if let image {
-                    Image(decorative: image, scale: 1)
+                if let thumbnail {
+                    Image(decorative: thumbnail.cgImage, scale: 1, orientation: Self.orientation(thumbnail.orientation))
                         .resizable()
                         .scaledToFill()
                         .transition(.opacity)
@@ -36,6 +37,20 @@ public struct PhotoTile: View {
                         .padding(KireiTheme.Spacing.small)
                 }
             }
-            .animation(KireiTheme.Motion.gentle, value: image != nil)
+            .animation(KireiTheme.Motion.gentle, value: thumbnail != nil)
+    }
+
+    static func orientation(_ orientation: CGImagePropertyOrientation) -> Image.Orientation {
+        switch orientation {
+        case .up: .up
+        case .upMirrored: .upMirrored
+        case .down: .down
+        case .downMirrored: .downMirrored
+        case .left: .left
+        case .leftMirrored: .leftMirrored
+        case .right: .right
+        case .rightMirrored: .rightMirrored
+        @unknown default: .up
+        }
     }
 }

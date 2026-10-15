@@ -3,7 +3,11 @@ import SwiftUI
 
 @main
 struct KireiApp: App {
-    @State private var library = LibraryModel(source: PhotoKitSource())
+    @State private var library = LibraryModel(
+        source: PhotoKitSource(),
+        analyzer: VisionAnalyzer(),
+        hasher: PhotoKitContentHasher()
+    )
 
     var body: some Scene {
         WindowGroup {

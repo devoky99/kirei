@@ -1,8 +1,10 @@
+import Foundation
+
 /// Woher der Kern seine Fotos bekommt.
 ///
 /// In der App liefert `PhotoKitSource` die echte Mediathek, im Prüfstand
-/// liefert ein Ordner mit markierten Testbildern. Der Kern merkt keinen
-/// Unterschied, deshalb lassen sich Vorschläge auf dem Mac messen.
+/// liefert ein Ordner mit Testbildern. Der Kern merkt keinen Unterschied,
+/// deshalb lassen sich Vorschläge auf dem Mac messen.
 public protocol PhotoSource: Sendable {
     /// Aktueller Stand der Berechtigung, ohne nachzufragen.
     func access() -> LibraryAccess
@@ -14,7 +16,7 @@ public protocol PhotoSource: Sendable {
     func fetchRecords() async throws -> [AssetRecord]
 
     /// Ein lokales Vorschaubild. Gibt `nil` zurück, wenn es nur in iCloud liegt.
-    func thumbnail(for id: AssetID, maxPixelSize: Int) async -> Thumbnail?
+    func thumbnail(for id: AssetID, maxPixelSize: Int, mode: ThumbnailMode) async -> Thumbnail?
 }
 
 /// Eine Quelle, die sagen kann, was sich seit dem letzten Scan geändert hat.
@@ -24,4 +26,10 @@ public protocol LibraryChangeTracker: Sendable {
 
     /// Was sich seit dem Merkzettel geändert hat.
     func changes(since token: ChangeToken) async throws -> LibraryChangeResult
+}
+
+/// Prüfsumme des Originals, um exakte Duplikate sicher zu erkennen.
+public protocol ContentHasher: Sendable {
+    /// Nur wenn das Original auf dem Gerät liegt. Lädt nie aus iCloud.
+    func contentHash(for id: AssetID) async -> Data?
 }

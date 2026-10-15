@@ -1,6 +1,6 @@
 /// Zählt, was in der Mediathek liegt. Grundlage für die spätere Speicher-Bilanz.
 public struct LibrarySummary: Sendable, Equatable {
-    /// Fotos ohne Bildschirmfotos.
+    /// Fotos ohne Bildschirmfotos und ohne verborgene Serienbilder.
     public let photos: Int
     public let videos: Int
     public let screenshots: Int
@@ -15,7 +15,7 @@ public struct LibrarySummary: Sendable, Equatable {
         var photos = 0
         var videos = 0
         var screenshots = 0
-        for record in records {
+        for record in records where record.isVisibleInLibrary {
             switch record.kind {
             case .photo where record.isScreenshot:
                 screenshots += 1

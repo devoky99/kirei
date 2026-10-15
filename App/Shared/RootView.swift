@@ -8,7 +8,7 @@ struct RootView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(Text("Library"))
+                .navigationTitle(Text(verbatim: "Kirei"))
         }
     }
 
@@ -20,7 +20,7 @@ struct RootView: View {
         case .denied, .restricted:
             AccessDeniedView()
         case .limited, .full:
-            LibraryGridView()
+            ScanOverviewView()
         }
     }
 }
