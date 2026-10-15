@@ -51,6 +51,46 @@
         }
       }
     },
+    "%lld photos were skipped, usually because they are only in iCloud.": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo was skipped, usually because it is only in iCloud."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos were skipped, usually because they are only in iCloud."
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Foto wurde übersprungen, meist weil es nur in iCloud liegt."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Fotos wurden übersprungen, meist weil sie nur in iCloud liegen."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld screenshots": {
       "localizations": {
         "en": {
@@ -84,6 +124,46 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld Bildschirmfotos"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld suggestions": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld suggestion"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld suggestions"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Vorschlag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Vorschläge"
                 }
               }
             }
@@ -131,12 +211,92 @@
         }
       }
     },
+    "About %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa %@"
+          }
+        }
+      }
+    },
+    "All photos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Fotos"
+          }
+        }
+      }
+    },
+    "Almost the same as the photo you keep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fast gleich wie das behaltene Foto"
+          }
+        }
+      }
+    },
+    "Best photo in this group": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestes Foto der Gruppe"
+          }
+        }
+      }
+    },
+    "Blurry photos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unscharfe Fotos"
+          }
+        }
+      }
+    },
+    "Bursts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serien"
+          }
+        }
+      }
+    },
     "Check again": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Erneut prüfen"
+          }
+        }
+      }
+    },
+    "Checking faces: %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesichter prüfen: %1$lld von %2$lld"
+          }
+        }
+      }
+    },
+    "Comparing similar photos…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ähnliche Fotos werden verglichen …"
           }
         }
       }
@@ -151,6 +311,96 @@
         }
       }
     },
+    "Edited, never suggested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeitet, wird nie vorgeschlagen"
+          }
+        }
+      }
+    },
+    "Exact copy": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exakte Kopie"
+          }
+        }
+      }
+    },
+    "Exact duplicates": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exakte Duplikate"
+          }
+        }
+      }
+    },
+    "Eyes closed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Augen geschlossen"
+          }
+        }
+      }
+    },
+    "Eyes open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Augen offen"
+          }
+        }
+      }
+    },
+    "Favorite, never suggested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Favorit, wird nie vorgeschlagen"
+          }
+        }
+      }
+    },
+    "In one of your albums, never suggested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In einem deiner Alben, wird nie vorgeschlagen"
+          }
+        }
+      }
+    },
+    "Keep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behalten"
+          }
+        }
+      }
+    },
+    "Kept as the original": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird als Original behalten"
+          }
+        }
+      }
+    },
     "Kirei looks for duplicates, similar shots and blurry photos. Everything stays on your device, and nothing is deleted without you.": {
       "localizations": {
         "de": {
@@ -161,12 +411,22 @@
         }
       }
     },
-    "Library": {
+    "Large videos": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mediathek"
+            "value": "Große Videos"
+          }
+        }
+      }
+    },
+    "Less sharp than the photo you keep": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unschärfer als das behaltene Foto"
           }
         }
       }
@@ -181,12 +441,62 @@
         }
       }
     },
+    "Looking at photos: %lld of %lld": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos ansehen: %1$lld von %2$lld"
+          }
+        }
+      }
+    },
+    "Looks blurry": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wirkt unscharf"
+          }
+        }
+      }
+    },
+    "Not selected in the burst": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Serie nicht ausgewählt"
+          }
+        }
+      }
+    },
+    "Nothing to tidy up right now.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerade gibt es nichts aufzuräumen."
+          }
+        }
+      }
+    },
     "Open Settings": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Einstellungen öffnen"
+          }
+        }
+      }
+    },
+    "Paused while your device cools down.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausiert, bis das Gerät abgekühlt ist."
           }
         }
       }
@@ -211,6 +521,16 @@
         }
       }
     },
+    "Preselected": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorausgewählt"
+          }
+        }
+      }
+    },
     "Reading your library…": {
       "localizations": {
         "de": {
@@ -221,12 +541,132 @@
         }
       }
     },
+    "Screen recording, %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmaufnahme, %@"
+          }
+        }
+      }
+    },
+    "Screen recordings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmaufnahmen"
+          }
+        }
+      }
+    },
+    "Screenshot from %lld days ago": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Screenshot from %lld day ago"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Screenshot from %lld days ago"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Bildschirmfoto von vor %lld Tag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Bildschirmfoto von vor %lld Tagen"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Screenshot, %@": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Bildschirmfoto, %@"
+          }
+        }
+      }
+    },
+    "Screenshots": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmfotos"
+          }
+        }
+      }
+    },
+    "Selected in the burst": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Serie ausgewählt"
+          }
+        }
+      }
+    },
+    "Sharpest": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am schärfsten"
+          }
+        }
+      }
+    },
+    "Similar photos": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ähnliche Fotos"
+          }
+        }
+      }
+    },
+    "Suggested": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschlag"
+          }
+        }
+      }
+    },
+    "Suggestions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschläge"
           }
         }
       }
@@ -267,6 +707,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du kannst ihn in den Einstellungen einschalten. Kirei liest nur Vorschaubilder auf diesem Gerät und sendet nichts."
+          }
+        }
+      }
+    },
+    "about %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "etwa %@"
           }
         }
       }

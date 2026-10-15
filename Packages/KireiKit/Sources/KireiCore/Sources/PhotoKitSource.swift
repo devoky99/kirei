@@ -1,6 +1,7 @@
 #if canImport(Photos)
 import CoreGraphics
 import Foundation
+import ImageIO
 import Photos
 
 #if canImport(UIKit)
@@ -43,37 +44,71 @@ public struct PhotoKitSource: PhotoSource, LibraryChangeTracker {
     // MARK: Einträge
 
     public func fetchRecords() async throws -> [AssetRecord] {
+        let albumMembers = Self.assetIDs(in: PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .albumRegular, options: nil
+        ))
+        // Bildschirmaufnahmen kennt PhotoKit nur als intelligentes Album (ab iOS 18, macOS 15).
+        let screenRecordings = Self.assetIDs(in: PHAssetCollection.fetchAssetCollections(
+            with: .smartAlbum, subtype: .smartAlbumScreenRecordings, options: nil
+        ))
+
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         // Nur die eigene Mediathek. Geteilte Alben und per Kabel synchronisierte
         // Fotos lassen sich ohnehin nicht löschen.
         options.includeAssetSourceTypes = [.typeUserLibrary]
+        // Auch die verborgenen Bilder von Serien, sie belegen Platz.
+        options.includeAllBurstAssets = true
 
         let result = PHAsset.fetchAssets(with: options)
         var records: [AssetRecord] = []
         records.reserveCapacity(result.count)
         result.enumerateObjects { asset, _, _ in
-            records.append(Self.record(from: asset))
+            records.append(Self.record(
+                from: asset,
+                inUserAlbum: albumMembers.contains(asset.localIdentifier),
+                isScreenRecording: screenRecordings.contains(asset.localIdentifier)
+            ))
         }
         return records
     }
 
-    static func record(from asset: PHAsset) -> AssetRecord {
+    /// Alle Einträge in diesen Alben, etwa für die Schutzregel „in einem eigenen Album“.
+    static func assetIDs(in albums: PHFetchResult<PHAssetCollection>) -> Set<String> {
+        var ids = Set<String>()
+        albums.enumerateObjects { album, _, _ in
+            let assets = PHAsset.fetchAssets(in: album, options: nil)
+            assets.enumerateObjects { asset, _, _ in
+                ids.insert(asset.localIdentifier)
+            }
+        }
+        return ids
+    }
+
+    static func record(from asset: PHAsset, inUserAlbum: Bool, isScreenRecording: Bool) -> AssetRecord {
         var traits: AssetTraits = []
-        if asset.mediaSubtypes.contains(.photoScreenshot) { traits.insert(.screenshot) }
-        if asset.mediaSubtypes.contains(.photoLive) { traits.insert(.livePhoto) }
-        if asset.representsBurst || asset.burstIdentifier != nil { traits.insert(.burst) }
+        let subtypes = asset.mediaSubtypes
+        if subtypes.contains(.photoScreenshot) { traits.insert(.screenshot) }
+        if subtypes.contains(.photoLive) { traits.insert(.livePhoto) }
+        if isScreenRecording { traits.insert(.screenRecording) }
+        if asset.burstIdentifier != nil { traits.insert(.burst) }
+        if asset.representsBurst { traits.insert(.burstRepresentative) }
+        let selection = asset.burstSelectionTypes
+        if selection.contains(.userPick) { traits.insert(.burstUserPick) }
+        if selection.contains(.autoPick) { traits.insert(.burstAutoPick) }
 
         return AssetRecord(
             id: AssetID(asset.localIdentifier),
             kind: kind(of: asset.mediaType),
             traits: traits,
             creationDate: asset.creationDate,
+            modificationDate: asset.modificationDate,
             pixelWidth: asset.pixelWidth,
             pixelHeight: asset.pixelHeight,
             duration: asset.duration,
             isFavorite: asset.isFavorite,
             hasAdjustments: asset.hasAdjustments,
+            isInUserAlbum: inUserAlbum,
             burstIdentifier: asset.burstIdentifier
         )
     }
@@ -88,23 +123,23 @@ public struct PhotoKitSource: PhotoSource, LibraryChangeTracker {
 
     // MARK: Vorschaubilder
 
-    public func thumbnail(for id: AssetID, maxPixelSize: Int) async -> Thumbnail? {
+    public func thumbnail(for id: AssetID, maxPixelSize: Int, mode: ThumbnailMode) async -> Thumbnail? {
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [id.rawValue], options: nil)
         guard let asset = fetch.firstObject else { return nil }
 
         let options = Self.makeThumbnailOptions()
         let size = CGSize(width: maxPixelSize, height: maxPixelSize)
+        let contentMode: PHImageContentMode = mode == .fill ? .aspectFill : .aspectFit
 
         return await withCheckedContinuation { continuation in
             // Mit .highQualityFormat ruft PhotoKit den Block genau einmal auf.
             PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: size,
-                contentMode: .aspectFill,
+                contentMode: contentMode,
                 options: options
             ) { image, _ in
-                let cgImage = image.flatMap(Self.cgImage(from:))
-                continuation.resume(returning: cgImage.map(Thumbnail.init(cgImage:)))
+                continuation.resume(returning: image.flatMap(Self.thumbnail(from:)))
             }
         }
     }
@@ -121,12 +156,29 @@ public struct PhotoKitSource: PhotoSource, LibraryChangeTracker {
     }
 
     #if canImport(UIKit)
-    static func cgImage(from image: UIImage) -> CGImage? {
-        image.cgImage
+    static func thumbnail(from image: UIImage) -> Thumbnail? {
+        guard let cgImage = image.cgImage else { return nil }
+        return Thumbnail(cgImage: cgImage, orientation: orientation(of: image.imageOrientation))
+    }
+
+    static func orientation(of orientation: UIImage.Orientation) -> CGImagePropertyOrientation {
+        switch orientation {
+        case .up: .up
+        case .down: .down
+        case .left: .left
+        case .right: .right
+        case .upMirrored: .upMirrored
+        case .downMirrored: .downMirrored
+        case .leftMirrored: .leftMirrored
+        case .rightMirrored: .rightMirrored
+        @unknown default: .up
+        }
     }
     #elseif canImport(AppKit)
-    static func cgImage(from image: NSImage) -> CGImage? {
-        image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    static func thumbnail(from image: NSImage) -> Thumbnail? {
+        // Auf dem Mac liefert PhotoKit das Bild bereits aufrecht.
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        return Thumbnail(cgImage: cgImage)
     }
     #endif
 

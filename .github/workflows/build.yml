@@ -4,7 +4,7 @@ name: Build
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   pull_request:
   workflow_dispatch:
 
@@ -20,8 +20,50 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Xcode-Version
-        run: xcodebuild -version
+      # Immer das neueste fertige Xcode, wie auf dem Mac zum Entwickeln.
+      - name: Neuestes Xcode wählen
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -v -i -E 'beta|rc' | sort -V | tail -n 1)
+          sudo xcode-select -s "$XCODE"
+          VORHANDEN=$(ls -d /Applications/Xcode_*.app | xargs -n1 basename | tr '\n' ' ')
+          echo "::notice title=Xcode::$(xcodebuild -version | tr '\n' ' ') (vorhanden: $VORHANDEN)"
 
       - name: Bauen und testen
-        run: scripts/test-all.sh
+        timeout-minutes: 25
+        run: |
+          set -o pipefail
+          scripts/test-all.sh 2>&1 | tee build.log
+
+      # Fehler, Warnungen und Testzahl als Anmerkungen am Commit.
+      - name: Ergebnisse anzeigen
+        if: always()
+        run: python3 scripts/ci-annotate.py build.log
+
+      # Prüft, ob die Vision-Analyse auf dem Rechner läuft. Bricht den Build nicht ab,
+      # weil virtuelle Maschinen nicht alle Rechenwerke eines echten Macs haben.
+      - name: Vision-Selbsttest
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 5
+        run: |
+          set -o pipefail
+          swift run -c release --package-path Packages/Pruefstand kirei-pruefstand selbsttest 2>&1 | tee selbsttest.log
+
+      - name: Selbsttest anzeigen
+        if: always()
+        run: |
+          if [ -f selbsttest.log ]; then python3 scripts/ci-annotate.py --notice "Vision-Selbsttest" selbsttest.log; fi
+
+      # Lässt alle Prüfstand-Befehle einmal mit erzeugten Bildern laufen.
+      - name: Prüfstand-Probelauf
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          set -o pipefail
+          scripts/ci-pruefstand-probe.sh 2>&1 | tee probelauf.log
+
+      - name: Probelauf anzeigen
+        if: always()
+        run: |
+          if [ -f probelauf.log ]; then python3 scripts/ci-annotate.py --notice "Prüfstand-Probelauf" probelauf.log; fi
