@@ -94,54 +94,67 @@ public actor AssetIndex {
 
     /// Neue Einträge anlegen, geänderte zurücksetzen, verschwundene löschen.
     ///
-    /// Lädt nur die Felder, die verglichen werden, nicht die Merkmalsvektoren.
-    /// Speichert in Paketen, damit auch 100.000 neue Einträge wenig Speicher brauchen.
+    /// Arbeitet seitenweise mit je einem frischen Kontext und lädt nur die
+    /// Felder, die verglichen werden. So bleibt der Speicher auch bei 100.000
+    /// Fotos klein, beim ersten wie bei jedem weiteren Scan.
     @discardableResult
     public func sync(_ records: [AssetRecord]) throws -> IndexSyncResult {
-        return try withContext { context in
-            var descriptor = FetchDescriptor<IndexedAsset>()
-            descriptor.propertiesToFetch = [\.assetID, \.sortDate, \.modificationDate, \.isAnalyzable]
-            let existing = try context.fetch(descriptor)
-            var byID: [String: IndexedAsset] = [:]
-            byID.reserveCapacity(existing.count)
-            for entry in existing {
-                byID[entry.assetID] = entry
-            }
-
-            var seen = Set<String>()
-            var result = IndexSyncResult(inserted: 0, updated: 0, removed: 0)
-            var pending = 0
-            for record in records {
-                let key = record.id.rawValue
-                guard seen.insert(key).inserted else { continue }
-                if let entry = byID[key] {
-                    let dateChanged = entry.sortDate != (record.creationDate ?? .distantPast)
-                    if entry.modificationDate != record.modificationDate
-                        || entry.isAnalyzable != record.isAnalyzable
-                        || dateChanged {
-                        entry.reset(with: record)
-                        result.updated += 1
-                        pending += 1
-                    }
-                } else {
-                    context.insert(IndexedAsset(record: record))
-                    result.inserted += 1
-                    pending += 1
-                }
-                if pending >= Self.saveChunk {
-                    try context.save()
-                    pending = 0
-                }
-            }
-
-            for entry in existing where !seen.contains(entry.assetID) {
-                context.delete(entry)
-                result.removed += 1
-            }
-
-            try context.save()
-            return result
+        var remaining: [String: AssetRecord] = [:]
+        remaining.reserveCapacity(records.count)
+        for record in records where remaining[record.id.rawValue] == nil {
+            remaining[record.id.rawValue] = record
         }
+        var result = IndexSyncResult(inserted: 0, updated: 0, removed: 0)
+
+        // 1. Vorhandene Einträge seitenweise abgleichen.
+        var cursor: String?
+        while true {
+            let lastID: String? = try withContext { context in
+                var descriptor: FetchDescriptor<IndexedAsset>
+                if let after = cursor {
+                    descriptor = FetchDescriptor<IndexedAsset>(
+                        predicate: #Predicate<IndexedAsset> { $0.assetID > after },
+                        sortBy: [SortDescriptor(\.assetID)]
+                    )
+                } else {
+                    descriptor = FetchDescriptor<IndexedAsset>(sortBy: [SortDescriptor(\.assetID)])
+                }
+                descriptor.fetchLimit = Self.saveChunk
+                descriptor.propertiesToFetch = [\.assetID, \.sortDate, \.modificationDate, \.isAnalyzable]
+
+                let page = try context.fetch(descriptor)
+                for entry in page {
+                    if let record = remaining.removeValue(forKey: entry.assetID) {
+                        let dateChanged = entry.sortDate != (record.creationDate ?? .distantPast)
+                        if entry.modificationDate != record.modificationDate
+                            || entry.isAnalyzable != record.isAnalyzable
+                            || dateChanged {
+                            entry.reset(with: record)
+                            result.updated += 1
+                        }
+                    } else {
+                        context.delete(entry)
+                        result.removed += 1
+                    }
+                }
+                try context.save()
+                return page.last?.assetID
+            }
+            guard let lastID else { break }
+            cursor = lastID
+        }
+
+        // 2. Neue Einträge in Paketen anlegen.
+        for chunk in Array(remaining.values).chunks(of: Self.saveChunk) {
+            try withContext { context in
+                for record in chunk {
+                    context.insert(IndexedAsset(record: record))
+                }
+                try context.save()
+            }
+            result.inserted += chunk.count
+        }
+        return result
     }
 
     /// Fotos ohne lokales Vorschaubild beim nächsten Durchlauf erneut versuchen.
