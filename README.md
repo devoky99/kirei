@@ -45,6 +45,7 @@ swift run -c release --package-path Packages/Pruefstand kirei-pruefstand <Befehl
 | Befehl | Wozu |
 | --- | --- |
 | `selbsttest` | prüft, ob Vision auf diesem Mac rechnet |
+| `beispiel <Ordner>` | legt erzeugte Beispielbilder an, um die Befehle auszuprobieren |
 | `messen <Ordner>` | Zeit pro Foto, hochgerechnet auf 20.000 Fotos |
 | `kalibrieren <Ordner>` | schlägt Schwellen aus markierten Beispielen vor |
 | `vorschlaege <Ordner>` | läuft wie die App und schreibt die Vorschläge „ähnlich“ in eine Prüfseite |

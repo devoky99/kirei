@@ -10,6 +10,9 @@ Prüfstand für Kirei
   kirei-pruefstand selbsttest
       Prüft, ob die Vision-Analyse auf diesem Mac läuft.
 
+  kirei-pruefstand beispiel <Ordner>
+      Legt erzeugte Beispielbilder an, um die Befehle auszuprobieren.
+
   kirei-pruefstand messen <Ordner>
       Misst die Zeit pro Foto und rechnet auf 20.000 Fotos hoch.
 
@@ -54,6 +57,14 @@ let status: Int32
 switch arguments.first {
 case "selbsttest":
     status = await Selbsttest.run()
+case "beispiel":
+    guard arguments.count >= 2 else {
+        print(Hilfe.text)
+        exit(64)
+    }
+    let target = URL(filePath: (arguments[1] as NSString).expandingTildeInPath, directoryHint: .isDirectory)
+    try? FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+    status = Beispiel.run(folder: target.standardizedFileURL)
 case "messen":
     status = await Messen.run(folder: Hilfe.ordner(arguments))
 case "kalibrieren":

@@ -51,3 +51,16 @@ jobs:
         if: always()
         run: |
           if [ -f selbsttest.log ]; then python3 scripts/ci-annotate.py --notice "Vision-Selbsttest" selbsttest.log; fi
+
+      # Lässt alle Prüfstand-Befehle einmal mit erzeugten Bildern laufen.
+      - name: Prüfstand-Probelauf
+        if: success()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          scripts/ci-pruefstand-probe.sh 2>&1 | tee probelauf.log
+
+      - name: Probelauf anzeigen
+        if: always()
+        run: |
+          if [ -f probelauf.log ]; then python3 scripts/ci-annotate.py --notice "Prüfstand-Probelauf" probelauf.log; fi

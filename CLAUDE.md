@@ -70,6 +70,7 @@ swift test --package-path Packages/KireiKit           # nur Kern-Tests auf dem M
 
 # Prüfstand (Befehle ohne Argument zeigen die Hilfe)
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand selbsttest
+swift run -c release --package-path Packages/Pruefstand kirei-pruefstand beispiel <Ordner>
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand messen <Ordner>
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand kalibrieren <Ordner>
 swift run -c release --package-path Packages/Pruefstand kirei-pruefstand vorschlaege <Ordner>
